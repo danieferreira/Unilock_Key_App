@@ -87,6 +87,7 @@ class KeyBLEReceiverManager @Inject constructor(
                                 data = KeyInfoResult(
                                     keyId = "",
                                     lockId = "",
+                                    battVoltage = 0.0,
                                     date = null,
                                     ConnectionState.Disconnected
                                 )
@@ -164,6 +165,7 @@ class KeyBLEReceiverManager @Inject constructor(
                                     data = KeyInfoResult(
                                         keyId = "",
                                         lockId = String(value, Charsets.UTF_8),
+                                        battVoltage = 0.0,
                                         date = null,
                                         ConnectionState.Connected
                                     )
@@ -200,17 +202,24 @@ class KeyBLEReceiverManager @Inject constructor(
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 if (characteristic.uuid == UUID.fromString(CHAR2_UUID)) {
                     //Key Number
-                    var keyNoStr = String(value, Charsets.UTF_8)
-                    Log.d("BLEReceiverManager", "Read CHAR2 success: ${keyNoStr}")
+                    val valueStr = String(value, Charsets.UTF_8)
+                    Log.d("BLEReceiverManager", "Read CHAR2 success: ${valueStr}")
 
-                    keyNoStr = keyNoStr.substring(1, 9)
+                    val keyNoStr = valueStr.substring(1, 9)
                     val keyNo = keyNoStr.toLong(16)
+
+                    val battVoltStr = valueStr.substring(11, 15)
+                    var battVolt = 0.0;
+                    if (battVoltStr.isNotEmpty()) {
+                        battVolt = battVoltStr.toDouble();
+                    }
                     coroutineScope.launch {
                         data.emit(
                             Resource.Success(
                                 data = KeyInfoResult(
                                     keyId = keyNo.toString(),
                                     lockId = "",
+                                    battVoltage = battVolt,
                                     date = null,
                                     ConnectionState.Connected
                                 )
@@ -226,6 +235,7 @@ class KeyBLEReceiverManager @Inject constructor(
                                 data = KeyInfoResult(
                                     keyId = "",
                                     lockId = "",
+                                    battVoltage = 0.0,
                                     date = getKeyDate(value),
                                     ConnectionState.Connected
                                 )
@@ -380,6 +390,7 @@ class KeyBLEReceiverManager @Inject constructor(
                     data = KeyInfoResult(
                         keyId = "",
                         lockId = "",
+                        battVoltage = 0.0,
                         date = null,
                         ConnectionState.Disconnected
                     )

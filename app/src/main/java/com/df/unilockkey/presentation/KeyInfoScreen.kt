@@ -182,6 +182,10 @@ fun KeyInfoScreen(
                             style = MaterialTheme.typography.headlineMedium
                         )
                         Text(
+                            text = "Battery: ${viewModel.battVoltage}",
+                            style = MaterialTheme.typography.headlineSmall
+                        )
+                        Text(
                             text = "Lock: ${viewModel.lockId}",
                             style = MaterialTheme.typography.headlineMedium
                         )

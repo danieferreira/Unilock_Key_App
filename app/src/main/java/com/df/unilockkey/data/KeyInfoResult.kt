@@ -5,6 +5,7 @@ import java.util.Date
 data class KeyInfoResult(
     val keyId: String,
     val lockId: String,
+    val battVoltage: Double,
     val date: Date?,
     val connectionState: ConnectionState
 )
