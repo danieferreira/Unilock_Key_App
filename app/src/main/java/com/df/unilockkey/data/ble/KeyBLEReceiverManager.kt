@@ -254,11 +254,11 @@ class KeyBLEReceiverManager @Inject constructor(
         ) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 Log.d("BLEReceiverManager", "Write Date success")
-                coroutineScope.launch {
-                    data.emit(
-                        Resource.Loading(message = "Key Time set...")
-                    )
-                }
+//                coroutineScope.launch {
+//                    data.emit(
+//                        Resource.Loading(message = "Key Time set...")
+//                    )
+//                }
                 readKeyNumber(gatt)
             } else {
                 Log.d("BLEReceiverManager", "Write Date Failed!!")

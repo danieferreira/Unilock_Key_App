@@ -46,6 +46,9 @@ class KeyInfoViewModel @Inject constructor(
                     is Resource.Loading -> {
                         connectionState = ConnectionState.CurrentlyInitialising
                         initialisingMessage = result.message
+                        keyId = ""
+                        lockId = ""
+                        battVoltage = ""
                     }
                     is Resource.Error -> {
                         connectionState = ConnectionState.Unitialised
