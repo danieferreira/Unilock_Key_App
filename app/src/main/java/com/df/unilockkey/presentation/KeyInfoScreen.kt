@@ -112,11 +112,10 @@ fun KeyInfoScreen(
         ) {
             //Spacer
             Text(
-                "Unilock Key",
+                "UniLock Key",
                 fontSize = 35.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.Blue
-
+                color = Color.Red
             )
         }
         Row(
