@@ -125,7 +125,7 @@ fun KeyInfoScreen(
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxWidth(0.6f)
+                    .fillMaxWidth(0.7f)
                     .aspectRatio(1f)
                     .border(
                         BorderStroke(5.dp, Color.Blue),
@@ -186,6 +186,10 @@ fun KeyInfoScreen(
                         )
                         Text(
                             text = "Lock: ${viewModel.lockId}",
+                            style = MaterialTheme.typography.headlineMedium
+                        )
+                        Text(
+                            text = "Ver: ${viewModel.keyVersion}",
                             style = MaterialTheme.typography.headlineMedium
                         )
                     }

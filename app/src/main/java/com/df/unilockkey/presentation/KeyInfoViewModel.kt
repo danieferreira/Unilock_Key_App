@@ -24,6 +24,7 @@ class KeyInfoViewModel @Inject constructor(
     var keyId by mutableStateOf<String>("")
     var lockId by mutableStateOf<String>("")
     var battVoltage by mutableStateOf<String>("")
+    var keyVersion by mutableStateOf<String>("")
     var checked by mutableStateOf(true)
     var connectionState by mutableStateOf<ConnectionState>(ConnectionState.Unitialised)
 
@@ -42,6 +43,9 @@ class KeyInfoViewModel @Inject constructor(
                         if (result.data.lockId != "") {
                             lockId = result.data.lockId
                         }
+                        if (result.data.keyVersion != "") {
+                            keyVersion = result.data.keyVersion
+                        }
                     }
                     is Resource.Loading -> {
                         connectionState = ConnectionState.CurrentlyInitialising
@@ -49,6 +53,7 @@ class KeyInfoViewModel @Inject constructor(
                         keyId = ""
                         lockId = ""
                         battVoltage = ""
+                        keyVersion = ""
                     }
                     is Resource.Error -> {
                         connectionState = ConnectionState.Unitialised
