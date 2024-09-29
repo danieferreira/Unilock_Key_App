@@ -8,15 +8,29 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import com.df.unilockkey.agent.ApiService
+import com.df.unilockkey.agent.Authenticate
+import com.df.unilockkey.agent.LoginRequest
+import com.df.unilockkey.agent.TokenManager
 import com.df.unilockkey.presentation.Navigation
 import com.df.unilockkey.ui.theme.UnilockKeyTheme
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import javax.inject.Inject
+
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-    @Inject lateinit var bluetoothAdapter: BluetoothAdapter
+    @Inject
+    lateinit var bluetoothAdapter: BluetoothAdapter
+    @Inject
+    lateinit var api: ApiService
+    @Inject
+    lateinit var tokenManager: TokenManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,16 +48,17 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
+        testVolley()
         showBluetoothDialog()
     }
 
     private var isBluetoothDialogAlreadyShown = false
     private fun showBluetoothDialog() {
-        if(!bluetoothAdapter.isEnabled) {
+        if (!bluetoothAdapter.isEnabled) {
             if (!isBluetoothDialogAlreadyShown) {
                 val bluetoothIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
                 startBluetoothIntentForResults.launch(bluetoothIntent)
-                isBluetoothDialogAlreadyShown = true;
+                isBluetoothDialogAlreadyShown = true
             }
         }
     }
@@ -51,8 +66,20 @@ class MainActivity : ComponentActivity() {
     private val startBluetoothIntentForResults =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             isBluetoothDialogAlreadyShown = false
-            if (result.resultCode !=Activity.RESULT_OK) {
+            if (result.resultCode != Activity.RESULT_OK) {
                 showBluetoothDialog()
             }
         }
+
+    private fun testVolley() {
+
+        val auth = Authenticate(api, tokenManager)
+        val scope = CoroutineScope(Job() + Dispatchers.Main)
+        scope.launch {
+            auth.login(LoginRequest("Danie", "1234"))
+        }
+    }
 }
+
+
+
