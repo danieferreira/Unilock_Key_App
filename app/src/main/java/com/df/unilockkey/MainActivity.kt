@@ -11,7 +11,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import com.df.unilockkey.agent.ApiService
 import com.df.unilockkey.agent.Authenticate
 import com.df.unilockkey.agent.LoginRequest
-import com.df.unilockkey.agent.TokenManager
 import com.df.unilockkey.presentation.Navigation
 import com.df.unilockkey.ui.theme.UnilockKeyTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -30,7 +29,7 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var api: ApiService
     @Inject
-    lateinit var tokenManager: TokenManager
+    lateinit var auth: Authenticate
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -48,7 +47,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        testVolley()
+        loginUser(auth)
         showBluetoothDialog()
     }
 
@@ -71,9 +70,8 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-    private fun testVolley() {
+    private fun loginUser(auth: Authenticate) {
 
-        val auth = Authenticate(api, tokenManager)
         val scope = CoroutineScope(Job() + Dispatchers.Main)
         scope.launch {
             auth.login(LoginRequest("Danie", "1234"))

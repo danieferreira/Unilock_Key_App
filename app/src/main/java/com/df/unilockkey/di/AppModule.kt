@@ -5,6 +5,10 @@ import android.bluetooth.BluetoothManager
 import android.content.Context
 import com.df.unilockkey.agent.ApiService
 import com.df.unilockkey.agent.AuthInterceptor
+import com.df.unilockkey.agent.Authenticate
+import com.df.unilockkey.agent.KeyService
+import com.df.unilockkey.agent.LockService
+import com.df.unilockkey.agent.TokenManager
 import com.df.unilockkey.data.KeyReceiverManager
 import com.df.unilockkey.data.ble.KeyBLEReceiverManager
 import com.df.unilockkey.repository.DataRepository
@@ -74,4 +78,30 @@ object AppModule {
         .addConverterFactory(GsonConverterFactory.create())
         .build()
         .create(ApiService::class.java)
+
+    @Provides
+    @Singleton
+    fun providesAuthenticate(
+        api: ApiService,
+        tokenManager: TokenManager
+    ): Authenticate {
+        return Authenticate(api, tokenManager)
+    }
+
+    @Provides
+    @Singleton
+    fun providesKeyService(
+        api: ApiService,
+    ): KeyService {
+        return KeyService(api)
+    }
+
+    @Provides
+    @Singleton
+    fun providesLockService(
+        api: ApiService,
+    ): LockService {
+        return LockService(api)
+    }
+
 }

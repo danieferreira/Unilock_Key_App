@@ -20,11 +20,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 
 @Composable
 fun StartScreen(
-    navController: NavController
+    navController: NavController,
+    viewModel: StartScreenViewModel = hiltViewModel()
 ) {
 
     Column(
@@ -71,7 +73,7 @@ fun StartScreen(
                     .clickable {
                         navController.navigate(Screen.KeyInfoScreen.route) {
                             popUpTo(Screen.StartScreen.route) {
-                                inclusive = true;
+                                inclusive = true
                             }
                         }
                     },

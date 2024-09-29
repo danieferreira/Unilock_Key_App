@@ -7,11 +7,18 @@ import jakarta.inject.Inject
 import okhttp3.Interceptor
 import okhttp3.Response
 import retrofit2.http.Body
+import retrofit2.http.GET
 import retrofit2.http.POST
 
 interface ApiService {
     @POST("/login")
     suspend fun login(@Body request: LoginRequest): retrofit2.Response<LoginResponse>
+
+    @GET("/key")
+    suspend fun getKeys(): retrofit2.Response<Array<Key>>
+
+    @GET("/lock")
+    suspend fun getLocks(): retrofit2.Response<Array<UniLock>>
 }
 
 data class LoginRequest(
@@ -23,6 +30,16 @@ data class LoginResponse(
     val token: String,
 )
 
+data class Key (
+    val keyNumber: Int,
+    val locks: Array<UniLock>
+)
+
+data class UniLock (
+    val lockNumber: Int,
+    val keys: Array<Key>
+)
+
 class AuthInterceptor @Inject constructor(): Interceptor {
 
     @Inject
@@ -32,8 +49,10 @@ class AuthInterceptor @Inject constructor(): Interceptor {
         val request = chain.request().newBuilder()
 
         val token = tokenManager.getToken()
-        request.addHeader("Authorization", "Bearer $token")
-        request.addHeader("Accept","application/json")
+        if ((token != null) && (token != "")) {
+            request.addHeader("Authorization", "Bearer $token")
+            request.addHeader("Accept", "application/json")
+        }
         return chain.proceed(request.build())
     }}
 
