@@ -2,6 +2,8 @@ package com.df.unilockkey.agent
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.df.unilockkey.repository.Unikey
+import com.df.unilockkey.repository.Unilock
 import dagger.hilt.android.qualifiers.ApplicationContext
 import jakarta.inject.Inject
 import okhttp3.Interceptor
@@ -15,10 +17,10 @@ interface ApiService {
     suspend fun login(@Body request: LoginRequest): retrofit2.Response<LoginResponse>
 
     @GET("/key")
-    suspend fun getKeys(): retrofit2.Response<Array<Key>>
+    suspend fun getKeys(): retrofit2.Response<Array<Unikey>>
 
     @GET("/lock")
-    suspend fun getLocks(): retrofit2.Response<Array<UniLock>>
+    suspend fun getLocks(): retrofit2.Response<Array<Unilock>>
 }
 
 data class LoginRequest(
@@ -28,16 +30,6 @@ data class LoginRequest(
 
 data class LoginResponse(
     val token: String,
-)
-
-data class Key (
-    val keyNumber: Int,
-    val locks: Array<UniLock>
-)
-
-data class UniLock (
-    val lockNumber: Int,
-    val keys: Array<Key>
 )
 
 class AuthInterceptor @Inject constructor(): Interceptor {

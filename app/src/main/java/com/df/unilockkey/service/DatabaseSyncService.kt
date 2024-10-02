@@ -1,34 +1,44 @@
-package com.df.unilockkey.presentation
+package com.df.unilockkey.service
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.df.unilockkey.agent.Authenticate
 import com.df.unilockkey.agent.KeyService
 import com.df.unilockkey.agent.LockService
+import com.df.unilockkey.agent.LoginRequest
+import com.df.unilockkey.repository.AppDatabase
 import com.df.unilockkey.util.ApiEvent
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-@HiltViewModel
-class StartScreenViewModel @Inject constructor(
-    private val authenticate: Authenticate,
+class DatabaseSyncService @Inject constructor(
+    private val auth: Authenticate,
     private val keyService: KeyService,
     private val lockService: LockService,
-) : ViewModel() {
+    private val appDatabase: AppDatabase
+) {
 
-    init {
+    private val scope = CoroutineScope(Job() + Dispatchers.Main)
+
+    fun SyncDatabase() {
         subscribeToAuthenticate()
         subscribeToKeyService()
         subscribeToLockService()
+
+        loginUser(auth);
+    }
+
+    private fun loginUser(auth: Authenticate) {
+
+        scope.launch {
+            auth.login(LoginRequest("Danie", "1234"))
+        }
     }
 
     private fun subscribeToAuthenticate() {
-        viewModelScope.launch {
-            authenticate.data.collect{ result ->
+        scope.launch {
+            auth.data.collect{ result ->
                 when(result) {
                     is ApiEvent.LoggedIn -> {
                         syncKeys()
@@ -44,16 +54,16 @@ class StartScreenViewModel @Inject constructor(
     }
 
     private fun subscribeToKeyService() {
-        viewModelScope.launch {
+        scope.launch {
             keyService.data.collect{ result ->
                 when(result) {
-                    is ApiEvent.LoggedIn -> {
-                        syncKeys()
-                    }
+                    is ApiEvent.LoggedIn -> { }
                     is ApiEvent.Keys -> {
+                        for (key in result.data) {
+                            appDatabase.unikeyDao().insertAll(key)
+                        }
                         syncLocks()
                     }
-
                     is ApiEvent.Locks -> { }
                 }
             }
@@ -61,33 +71,31 @@ class StartScreenViewModel @Inject constructor(
     }
 
     private fun subscribeToLockService() {
-        viewModelScope.launch {
+        scope.launch {
             lockService.data.collect{ result ->
                 when(result) {
-                    is ApiEvent.LoggedIn -> {
-                        syncKeys()
+                    is ApiEvent.LoggedIn -> { }
+                    is ApiEvent.Keys -> { }
+                    is ApiEvent.Locks -> {
+                        for (lock in result.data) {
+                            appDatabase.unilockDao().insertAll(lock)
+                        }
                     }
-                    is ApiEvent.Keys -> {
-                        syncLocks()
-                    }
-
-                    is ApiEvent.Locks -> { }
                 }
             }
         }
     }
 
     private fun syncKeys() {
-        val scope = CoroutineScope(Job() + Dispatchers.Main)
         scope.launch {
             keyService.getKeys()
         }
     }
 
     private fun syncLocks() {
-        val scope = CoroutineScope(Job() + Dispatchers.Main)
         scope.launch {
             lockService.getLocks()
         }
     }
+
 }

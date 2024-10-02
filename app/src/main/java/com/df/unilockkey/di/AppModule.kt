@@ -11,6 +11,7 @@ import com.df.unilockkey.agent.LockService
 import com.df.unilockkey.agent.TokenManager
 import com.df.unilockkey.data.KeyReceiverManager
 import com.df.unilockkey.data.ble.KeyBLEReceiverManager
+import com.df.unilockkey.repository.AppDatabase
 import com.df.unilockkey.repository.DataRepository
 import dagger.Module
 import dagger.Provides
@@ -50,6 +51,14 @@ object AppModule {
         @ApplicationContext context: Context
     ): DataRepository {
         return DataRepository(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideAppDatabase(
+        @ApplicationContext context: Context
+    ): AppDatabase {
+        return AppDatabase.getDatabase(context)
     }
 
     @Provides

@@ -1,6 +1,7 @@
 package com.df.unilockkey.agent
 
 import android.util.Log
+import com.df.unilockkey.repository.Unilock
 import com.df.unilockkey.util.ApiEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -11,7 +12,7 @@ import java.net.UnknownHostException
 
 class LockService(private var api: ApiService) {
     private val coroutineScope = CoroutineScope(Dispatchers.Default)
-    val data: MutableSharedFlow<ApiEvent<Array<UniLock>>> = MutableSharedFlow()
+    val data: MutableSharedFlow<ApiEvent<Array<Unilock>>> = MutableSharedFlow()
 
     suspend fun getLocks() {
         try {

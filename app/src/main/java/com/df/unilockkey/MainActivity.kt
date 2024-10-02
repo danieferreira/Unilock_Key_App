@@ -8,16 +8,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import com.df.unilockkey.agent.ApiService
-import com.df.unilockkey.agent.Authenticate
-import com.df.unilockkey.agent.LoginRequest
 import com.df.unilockkey.presentation.Navigation
 import com.df.unilockkey.ui.theme.UnilockKeyTheme
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 
@@ -26,10 +19,6 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var bluetoothAdapter: BluetoothAdapter
-    @Inject
-    lateinit var api: ApiService
-    @Inject
-    lateinit var auth: Authenticate
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,7 +36,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        loginUser(auth)
         showBluetoothDialog()
     }
 
@@ -69,14 +57,6 @@ class MainActivity : ComponentActivity() {
                 showBluetoothDialog()
             }
         }
-
-    private fun loginUser(auth: Authenticate) {
-
-        val scope = CoroutineScope(Job() + Dispatchers.Main)
-        scope.launch {
-            auth.login(LoginRequest("Danie", "1234"))
-        }
-    }
 }
 
 
