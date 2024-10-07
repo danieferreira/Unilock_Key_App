@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Update
 
 @Dao
 interface UnikeyDao {
@@ -18,4 +19,8 @@ interface UnikeyDao {
 
     @Delete
     fun delete(key: Unikey)
+
+    @Update
+    fun update(key: Unikey)
+
 }

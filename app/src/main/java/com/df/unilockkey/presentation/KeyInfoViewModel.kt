@@ -1,5 +1,6 @@
 package com.df.unilockkey.presentation
 
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -7,6 +8,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.df.unilockkey.data.ConnectionState
 import com.df.unilockkey.data.KeyReceiverManager
+import com.df.unilockkey.repository.AppDatabase
 import com.df.unilockkey.repository.DataRepository
 import com.df.unilockkey.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,7 +18,8 @@ import javax.inject.Inject
 @HiltViewModel
 class KeyInfoViewModel @Inject constructor(
     private val keyReceiverManager: KeyReceiverManager,
-    private val dataRepository: DataRepository
+    private val dataRepository: DataRepository,
+    private val appDatabase: AppDatabase
 ): ViewModel() {
 
     var initialisingMessage by mutableStateOf<String?>(null)
@@ -42,6 +45,20 @@ class KeyInfoViewModel @Inject constructor(
                         }
                         if (result.data.lockId != "") {
                             lockId = result.data.lockId
+                            setKeyEnabled(false)
+                            try {
+                                val key = appDatabase.unikeyDao().findByKeyNumber(keyId.toInt())
+                                if (key != null) {
+                                    for (lock in key.locks) {
+                                        if (lock.lockNumber == lockId.toInt()) {
+                                            setKeyEnabled(true)
+                                            break
+                                        }
+                                    }
+                                }
+                            } catch (err: Exception){
+                                Log.d("KeyInfoViewModel", err.message.toString())
+                            }
                         }
                         if (result.data.keyVersion != "") {
                             keyVersion = result.data.keyVersion

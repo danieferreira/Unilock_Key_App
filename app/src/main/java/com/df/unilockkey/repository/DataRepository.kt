@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.StateFlow
 
 
 class DataRepository(context: Context) {
+
     private val sharedPreferences =
         context.applicationContext.getSharedPreferences("Setting", Context.MODE_PRIVATE)
 

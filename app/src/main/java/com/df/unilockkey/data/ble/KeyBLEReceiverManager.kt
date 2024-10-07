@@ -279,6 +279,7 @@ class KeyBLEReceiverManager @Inject constructor(
 
     private fun setKeyEnabled(gatt: BluetoothGatt) {
         if (dataRepository.keyEnabled) {
+
             val char1Service = findCharacteristic(SERVICE_UUID, CHAR1_UUID)
             if (char1Service != null) {
                 val data = ByteArray(1)
