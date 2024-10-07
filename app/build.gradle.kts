@@ -22,6 +22,9 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+        ksp {
+            arg("room.schemaLocation", "$projectDir/schemas")
+        }
     }
 
     buildTypes {
@@ -54,6 +57,10 @@ android {
     configurations { implementation.get().exclude(mapOf("group" to "org.jetbrains", "module" to "annotations"))}
 }
 
+kotlin {
+    jvmToolchain(11)
+}
+
 dependencies {
 
     implementation(libs.androidx.core.ktx)
@@ -70,7 +77,8 @@ dependencies {
     implementation(libs.transportation.consumer)
     implementation(libs.androidx.espresso.core)
     implementation(libs.androidx.espresso.core)
-    implementation(libs.androidx.room.compiler)
+    ksp(libs.androidx.sqlite.bundled.android)
+    ksp(libs.androidx.room.compiler)
     implementation(libs.firebase.firestore.ktx)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
@@ -85,13 +93,11 @@ dependencies {
     implementation(libs.accompanist.permissions)
 
     // Viewmodel dependencies
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.6")
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
 
     // Hilt
-    val hiltVersion = "2.52"
-    implementation("com.google.dagger:hilt-android:$hiltVersion")
-    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
-    ksp("com.google.dagger:hilt-android-compiler:$hiltVersion")
-    ksp("com.google.dagger:hilt-compiler:$hiltVersion")
-
+    implementation(libs.hilt.android)
+    implementation(libs.androidx.hilt.navigation.compose)
+    ksp(libs.hilt.android.compiler)
+    ksp(libs.hilt.compiler)
 }

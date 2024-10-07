@@ -3,6 +3,7 @@ package com.df.unilockkey.di
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
 import android.content.Context
+import android.util.Log
 import com.df.unilockkey.agent.ApiService
 import com.df.unilockkey.agent.AuthInterceptor
 import com.df.unilockkey.agent.Authenticate
@@ -13,6 +14,7 @@ import com.df.unilockkey.data.KeyReceiverManager
 import com.df.unilockkey.data.ble.KeyBLEReceiverManager
 import com.df.unilockkey.repository.AppDatabase
 import com.df.unilockkey.repository.DataRepository
+import com.df.unilockkey.service.DatabaseSyncService
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -58,7 +60,13 @@ object AppModule {
     fun provideAppDatabase(
         @ApplicationContext context: Context
     ): AppDatabase {
-        return AppDatabase.getDatabase(context)
+        try {
+            val database = AppDatabase.getInstance(context)
+            return database
+        } catch (err: Exception) {
+            Log.d("AppDatabase", err.message.toString())
+        }
+        return AppDatabase.getInstance(context)
     }
 
     @Provides
@@ -113,4 +121,14 @@ object AppModule {
         return LockService(api)
     }
 
+    @Provides
+    @Singleton
+    fun providesDatabaseSyncService(
+        auth: Authenticate,
+        keyService: KeyService,
+        lockService: LockService,
+        appDatabase: AppDatabase
+    ): DatabaseSyncService {
+        return DatabaseSyncService(auth, keyService, lockService, appDatabase)
+    }
 }

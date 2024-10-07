@@ -9,6 +9,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import com.df.unilockkey.presentation.Navigation
+import com.df.unilockkey.service.DatabaseSyncService
 import com.df.unilockkey.ui.theme.UnilockKeyTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -19,6 +20,8 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var bluetoothAdapter: BluetoothAdapter
+    @Inject
+    lateinit var databaseSyncService: DatabaseSyncService
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,6 +39,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
+        databaseSyncService.SyncDatabase()
         showBluetoothDialog()
     }
 

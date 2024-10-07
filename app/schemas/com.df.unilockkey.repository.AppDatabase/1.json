@@ -1,0 +1,66 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "e0d6d0e7b9862005e31278c8d3e55bbf",
+    "entities": [
+      {
+        "tableName": "Unikey",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`keyNumber` INTEGER NOT NULL, `locks` TEXT NOT NULL, PRIMARY KEY(`keyNumber`))",
+        "fields": [
+          {
+            "fieldPath": "keyNumber",
+            "columnName": "keyNumber",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "locks",
+            "columnName": "locks",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "keyNumber"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "Unilock",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`lockNumber` INTEGER NOT NULL, `keys` TEXT NOT NULL, PRIMARY KEY(`lockNumber`))",
+        "fields": [
+          {
+            "fieldPath": "lockNumber",
+            "columnName": "lockNumber",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "keys",
+            "columnName": "keys",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "lockNumber"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      }
+    ],
+    "views": [],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'e0d6d0e7b9862005e31278c8d3e55bbf')"
+    ]
+  }
+}

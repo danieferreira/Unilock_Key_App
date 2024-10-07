@@ -14,7 +14,7 @@ interface UnikeyDao {
     fun findByKeyNumber(keyNumber: Int): Unikey
 
     @Insert
-    fun insertAll(vararg keys: Unikey)
+    fun insert(vararg key: Unikey)
 
     @Delete
     fun delete(key: Unikey)

@@ -1,5 +1,6 @@
 package com.df.unilockkey.service
 
+import android.util.Log
 import com.df.unilockkey.agent.Authenticate
 import com.df.unilockkey.agent.KeyService
 import com.df.unilockkey.agent.LockService
@@ -41,11 +42,9 @@ class DatabaseSyncService @Inject constructor(
             auth.data.collect{ result ->
                 when(result) {
                     is ApiEvent.LoggedIn -> {
-                        syncKeys()
+                        keyService.getKeys()
                     }
-                    is ApiEvent.Keys -> {
-                        syncLocks()
-                    }
+                    is ApiEvent.Keys -> { }
 
                     is ApiEvent.Locks -> { }
                 }
@@ -59,10 +58,14 @@ class DatabaseSyncService @Inject constructor(
                 when(result) {
                     is ApiEvent.LoggedIn -> { }
                     is ApiEvent.Keys -> {
-                        for (key in result.data) {
-                            appDatabase.unikeyDao().insertAll(key)
-                        }
-                        syncLocks()
+                            try {
+                                for (key in result.data) {
+                                    appDatabase.unikeyDao().insert(key)
+                                }
+                                lockService.getLocks()
+                            } catch (err: Exception) {
+                                Log.d("DatabaseSyncService", err.message.toString())
+                            }
                     }
                     is ApiEvent.Locks -> { }
                 }
@@ -85,17 +88,4 @@ class DatabaseSyncService @Inject constructor(
             }
         }
     }
-
-    private fun syncKeys() {
-        scope.launch {
-            keyService.getKeys()
-        }
-    }
-
-    private fun syncLocks() {
-        scope.launch {
-            lockService.getLocks()
-        }
-    }
-
 }

@@ -7,5 +7,6 @@ import androidx.room.PrimaryKey
 data class Unilock  (
     @PrimaryKey
     val lockNumber: Int,
-    val keys: List<Unikey>
-    )
+    val keys: ArrayList<Unikey>
+)
+

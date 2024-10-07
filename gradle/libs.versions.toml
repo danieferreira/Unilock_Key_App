@@ -1,12 +1,13 @@
 [versions]
 accompanistPermissions = "0.36.0"
 agp = "8.6.1"
+hiltNavigationCompose = "1.2.0"
+hiltVersion = "2.52"
 kotlin = "2.0.0"
 coreKtx = "1.13.1"
 junit = "4.13.2"
 junitVersion = "1.2.1"
 espressoCore = "3.6.1"
-kotlinxSerializationJson = "1.7.3"
 lifecycleRuntimeKtx = "2.8.6"
 activityCompose = "1.9.2"
 compose-plugin="1.6.10"
@@ -15,17 +16,22 @@ datastoreCoreAndroid = "1.1.1"
 datastorePreferencesCoreJvm = "1.1.1"
 okhttp = "4.12.0"
 transportationConsumer = "2.3.0"
-adapterGuava = "2.11.0"
 retrofit = "2.11.0"
 converterGson = "2.11.0"
-loggingInterceptor = "5.0.0-alpha.14"
-roomCompiler = "2.7.0-alpha08"
-roomKtx = "2.7.0-alpha08"
+roomCompiler = "2.6.1"
+roomKtx = "2.6.1"
 firebaseFirestoreKtx = "25.1.0"
+sqliteAndroid = "2.3.0"
+sqliteBundledAndroid = "2.4.0"
 
 [libraries]
 accompanist-permissions = { module = "com.google.accompanist:accompanist-permissions", version.ref = "accompanistPermissions" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
+androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycleRuntimeKtx" }
+hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hiltVersion" }
+hilt-android-compiler = { module = "com.google.dagger:hilt-android-compiler", version.ref = "hiltVersion" }
+hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hiltVersion" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
@@ -49,6 +55,8 @@ converter-gson = { group = "com.squareup.retrofit2", name = "converter-gson", ve
 androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "roomCompiler" }
 androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "roomKtx" }
 firebase-firestore-ktx = { group = "com.google.firebase", name = "firebase-firestore-ktx", version.ref = "firebaseFirestoreKtx" }
+androidx-sqlite-android = { group = "androidx.sqlite", name = "sqlite-android", version.ref = "sqliteAndroid" }
+androidx-sqlite-bundled-android = { group = "androidx.sqlite", name = "sqlite-bundled-android", version = "2.5.0-alpha09" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
