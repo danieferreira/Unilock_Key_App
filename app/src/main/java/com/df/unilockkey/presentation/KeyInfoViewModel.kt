@@ -28,7 +28,7 @@ class KeyInfoViewModel @Inject constructor(
     var lockId by mutableStateOf<String>("")
     var battVoltage by mutableStateOf<String>("")
     var keyVersion by mutableStateOf<String>("")
-    var checked by mutableStateOf(true)
+    var checked by mutableStateOf(false)
     var connectionState by mutableStateOf<ConnectionState>(ConnectionState.Unitialised)
 
     private fun subscribeToChanged() {
@@ -71,6 +71,7 @@ class KeyInfoViewModel @Inject constructor(
                         lockId = ""
                         battVoltage = ""
                         keyVersion = ""
+                        setKeyEnabled(false)
                     }
                     is Resource.Error -> {
                         connectionState = ConnectionState.Unitialised
@@ -103,5 +104,6 @@ class KeyInfoViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         keyReceiverManager.closeConnection()
+
     }
 }
