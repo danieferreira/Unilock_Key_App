@@ -192,7 +192,10 @@ fun KeyInfoScreen(
                             text = "Ver: ${viewModel.keyVersion}",
                             style = MaterialTheme.typography.headlineMedium
                         )
-                    }
+                        Text(
+                            text = viewModel.keyValid,
+                            style = MaterialTheme.typography.headlineMedium
+                        )                    }
                 }
             }
         }
@@ -207,6 +210,7 @@ fun KeyInfoScreen(
                 "Enable Key:"
             )
             Checkbox(
+                enabled = false,
                 checked = viewModel.checked,
                 onCheckedChange = { viewModel.setKeyEnabled(it) }
             )

@@ -27,7 +27,7 @@ class DatabaseSyncService @Inject constructor(
         subscribeToKeyService()
         subscribeToLockService()
 
-        loginUser(auth);
+        loginUser(auth)
     }
 
     private fun loginUser(auth: Authenticate) {
@@ -49,7 +49,6 @@ class DatabaseSyncService @Inject constructor(
                         keyService.getKeys()
                     }
                     is ApiEvent.Keys -> { }
-
                     is ApiEvent.Locks -> { }
                 }
             }

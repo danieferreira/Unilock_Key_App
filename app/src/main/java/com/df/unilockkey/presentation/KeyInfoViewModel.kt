@@ -28,6 +28,7 @@ class KeyInfoViewModel @Inject constructor(
     var lockId by mutableStateOf<String>("")
     var battVoltage by mutableStateOf<String>("")
     var keyVersion by mutableStateOf<String>("")
+    var keyValid by mutableStateOf<String>("")
     var checked by mutableStateOf(false)
     var connectionState by mutableStateOf<ConnectionState>(ConnectionState.Unitialised)
 
@@ -46,12 +47,14 @@ class KeyInfoViewModel @Inject constructor(
                         if (result.data.lockId != "") {
                             lockId = result.data.lockId
                             setKeyEnabled(false)
+                            keyValid = "Blocked"
                             try {
                                 val key = appDatabase.unikeyDao().findByKeyNumber(keyId.toInt())
                                 if (key != null) {
                                     for (lock in key.locks) {
                                         if (lock.lockNumber == lockId.toInt()) {
                                             setKeyEnabled(true)
+                                            keyValid = "Allowed"
                                             break
                                         }
                                     }
@@ -71,6 +74,7 @@ class KeyInfoViewModel @Inject constructor(
                         lockId = ""
                         battVoltage = ""
                         keyVersion = ""
+                        keyValid = ""
                         setKeyEnabled(false)
                     }
                     is Resource.Error -> {
@@ -97,8 +101,8 @@ class KeyInfoViewModel @Inject constructor(
     }
 
     fun setKeyEnabled(enabled: Boolean) {
-        dataRepository.keyEnabled = enabled;
-        checked = enabled;
+        dataRepository.keyEnabled = enabled
+        checked = enabled
     }
 
     override fun onCleared() {
