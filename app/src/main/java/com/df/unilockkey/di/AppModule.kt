@@ -15,6 +15,7 @@ import com.df.unilockkey.data.ble.KeyBLEReceiverManager
 import com.df.unilockkey.repository.AppDatabase
 import com.df.unilockkey.repository.DataRepository
 import com.df.unilockkey.service.DatabaseSyncService
+import com.df.unilockkey.service.EventLogService
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -127,8 +128,18 @@ object AppModule {
         auth: Authenticate,
         keyService: KeyService,
         lockService: LockService,
-        appDatabase: AppDatabase
+        appDatabase: AppDatabase,
+        eventLogService: EventLogService
     ): DatabaseSyncService {
-        return DatabaseSyncService(auth, keyService, lockService, appDatabase)
+        return DatabaseSyncService(auth, keyService, lockService, appDatabase, eventLogService)
+    }
+
+    @Provides
+    @Singleton
+    fun providesEventLogService(
+        appDatabase: AppDatabase,
+        api: ApiService
+    ): EventLogService {
+        return EventLogService(appDatabase, api)
     }
 }

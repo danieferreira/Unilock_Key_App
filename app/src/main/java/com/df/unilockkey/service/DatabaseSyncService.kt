@@ -17,7 +17,8 @@ class DatabaseSyncService @Inject constructor(
     private val auth: Authenticate,
     private val keyService: KeyService,
     private val lockService: LockService,
-    private val appDatabase: AppDatabase
+    private val appDatabase: AppDatabase,
+    private val logEventService: EventLogService
 ) {
 
     private val scope = CoroutineScope(Job() + Dispatchers.Main)
@@ -100,6 +101,7 @@ class DatabaseSyncService @Inject constructor(
                         } catch (err: Exception) {
                                 Log.d("DatabaseSyncService", err.message.toString())
                         }
+                        logEventService.syncEventLogs()
                     }
                 }
             }

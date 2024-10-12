@@ -64,4 +64,16 @@ class RoomConverters {
         )
     }
 
+    @TypeConverter
+    fun fromEventLog(value: EventLog?): String? {
+        return Gson().toJson(value)
+    }
+    @TypeConverter
+    fun toEventLog(value: String?): EventLog {
+        return  Gson().fromJson(
+            value,
+            object : TypeToken<EventLog?>() {}.type
+        )
+    }
+
 }

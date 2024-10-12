@@ -2,6 +2,7 @@ package com.df.unilockkey.agent
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.df.unilockkey.repository.EventLog
 import com.df.unilockkey.repository.Unikey
 import com.df.unilockkey.repository.Unilock
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -21,6 +22,9 @@ interface ApiService {
 
     @GET("/lock")
     suspend fun getLocks(): retrofit2.Response<Array<Unilock>>
+
+    @POST("/event")
+    suspend fun postEventLog(@Body event: EventLog)
 }
 
 data class LoginRequest(

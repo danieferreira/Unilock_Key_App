@@ -1,8 +1,8 @@
 {
   "formatVersion": 1,
   "database": {
-    "version": 1,
-    "identityHash": "45b95a149370efb2c5707908d4f5a8d1",
+    "version": 3,
+    "identityHash": "832dccacdcd3fc1ab98ea0dda22e6e33",
     "entities": [
       {
         "tableName": "Unikey",
@@ -58,7 +58,7 @@
       },
       {
         "tableName": "EventLog",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `timestamp` INTEGER NOT NULL, `keyNumber` INTEGER NOT NULL, `lockNumber` INTEGER NOT NULL, `event` TEXT NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `timestamp` INTEGER NOT NULL, `keyNumber` INTEGER NOT NULL, `lockNumber` INTEGER NOT NULL, `event` TEXT NOT NULL, `archived` INTEGER NOT NULL)",
         "fields": [
           {
             "fieldPath": "id",
@@ -89,6 +89,12 @@
             "columnName": "event",
             "affinity": "TEXT",
             "notNull": true
+          },
+          {
+            "fieldPath": "archived",
+            "columnName": "archived",
+            "affinity": "INTEGER",
+            "notNull": true
           }
         ],
         "primaryKey": {
@@ -104,7 +110,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '45b95a149370efb2c5707908d4f5a8d1')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '832dccacdcd3fc1ab98ea0dda22e6e33')"
     ]
   }
 }

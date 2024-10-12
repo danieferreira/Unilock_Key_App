@@ -8,11 +8,12 @@ import androidx.room.TypeConverters
 import kotlin.concurrent.Volatile
 
 
-@Database(entities = [Unikey::class, Unilock::class], version = 1)
+@Database(entities = [Unikey::class, Unilock::class, EventLog::class], version = 3)
 @TypeConverters(RoomConverters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun unilockDao(): UnilockDao
     abstract fun unikeyDao(): UnikeyDao
+    abstract fun eventLogDao(): EventLogDao
 
     companion object {
         @Volatile
@@ -27,7 +28,10 @@ abstract class AppDatabase : RoomDatabase() {
                 val instance = databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java, "unilock_database"
-                ).allowMainThreadQueries().build()
+                )
+                    .allowMainThreadQueries()
+                    .fallbackToDestructiveMigration()
+                    .build()
                 INSTANCE = instance
                 instance
             }

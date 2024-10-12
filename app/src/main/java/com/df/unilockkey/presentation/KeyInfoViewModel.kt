@@ -10,6 +10,7 @@ import com.df.unilockkey.data.ConnectionState
 import com.df.unilockkey.data.KeyReceiverManager
 import com.df.unilockkey.repository.AppDatabase
 import com.df.unilockkey.repository.DataRepository
+import com.df.unilockkey.service.EventLogService
 import com.df.unilockkey.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
@@ -19,7 +20,8 @@ import javax.inject.Inject
 class KeyInfoViewModel @Inject constructor(
     private val keyReceiverManager: KeyReceiverManager,
     private val dataRepository: DataRepository,
-    private val appDatabase: AppDatabase
+    private val appDatabase: AppDatabase,
+    private val eventLogService: EventLogService
 ): ViewModel() {
 
     var initialisingMessage by mutableStateOf<String?>(null)
@@ -37,34 +39,50 @@ class KeyInfoViewModel @Inject constructor(
             keyReceiverManager.data.collect{ result ->
                 when(result) {
                     is Resource.Success -> {
-                        connectionState = result.data.connectionState
-                        if (result.data.keyId != "") {
-                            keyId = result.data.keyId
-                        }
-                        if (result.data.battVoltage > 1.0) {
-                            battVoltage = "%.${2}f".format(result.data.battVoltage)
-                        }
-                        if (result.data.lockId != "") {
-                            lockId = result.data.lockId
-                            setKeyEnabled(false)
-                            keyValid = "Blocked"
-                            try {
-                                val key = appDatabase.unikeyDao().findByKeyNumber(keyId.toInt())
-                                if (key != null) {
-                                    for (lock in key.locks) {
-                                        if (lock.lockNumber == lockId.toInt()) {
-                                            setKeyEnabled(true)
-                                            keyValid = "Allowed"
-                                            break
+                        try {
+                            connectionState = result.data.connectionState
+                            if (result.data.keyId != "") {
+                                keyId = result.data.keyId
+                            }
+                            if (result.data.battVoltage > 1.0) {
+                                battVoltage = "%.${2}f".format(result.data.battVoltage)
+                            }
+                            if (result.data.lockId != "") {
+                                lockId = result.data.lockId
+                                setKeyEnabled(false)
+                                keyValid = "Blocked"
+                                try {
+                                    val key = appDatabase.unikeyDao().findByKeyNumber(keyId.toInt())
+                                    if (key != null) {
+                                        for (lock in key.locks) {
+                                            if (lock.lockNumber == lockId.toInt()) {
+                                                setKeyEnabled(true)
+                                                keyValid = "Allowed"
+                                                eventLogService.logEvent(
+                                                    "Allowed",
+                                                    keyId.toInt(),
+                                                    lockId.toInt()
+                                                )
+                                                break
+                                            }
                                         }
                                     }
+                                    eventLogService.logEvent(
+                                        "Blocked",
+                                        keyId.toInt(),
+                                        lockId.toInt()
+                                    )
+                                } catch (err: Exception) {
+                                    Log.d("KeyInfoViewModel", err.message.toString())
                                 }
-                            } catch (err: Exception){
-                                Log.d("KeyInfoViewModel", err.message.toString())
+                            } else {
+                                eventLogService.logEvent("Connected", keyId.toInt(), 0)
                             }
-                        }
-                        if (result.data.keyVersion != "") {
-                            keyVersion = result.data.keyVersion
+                            if (result.data.keyVersion != "") {
+                                keyVersion = result.data.keyVersion
+                            }
+                        } catch (err: Exception) {
+                            Log.d("KeyInfoViewModel", err.message.toString())
                         }
                     }
                     is Resource.Loading -> {
