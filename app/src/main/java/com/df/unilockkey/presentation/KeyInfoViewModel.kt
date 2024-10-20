@@ -61,7 +61,8 @@ class KeyInfoViewModel @Inject constructor(
                                                 eventLogService.logEvent(
                                                     "Allowed",
                                                     keyId.toInt(),
-                                                    lockId.toInt()
+                                                    lockId.toInt(),
+                                                    battVoltage
                                                 )
                                                 break
                                             }
@@ -70,13 +71,14 @@ class KeyInfoViewModel @Inject constructor(
                                     eventLogService.logEvent(
                                         "Blocked",
                                         keyId.toInt(),
-                                        lockId.toInt()
+                                        lockId.toInt(),
+                                        battVoltage
                                     )
                                 } catch (err: Exception) {
                                     Log.d("KeyInfoViewModel", err.message.toString())
                                 }
                             } else {
-                                eventLogService.logEvent("Connected", keyId.toInt(), 0)
+                                eventLogService.logEvent("Connected", keyId.toInt(), 0, battVoltage)
                             }
                             if (result.data.keyVersion != "") {
                                 keyVersion = result.data.keyVersion

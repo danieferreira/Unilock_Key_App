@@ -22,20 +22,29 @@ class DatabaseSyncService @Inject constructor(
 ) {
 
     private val scope = CoroutineScope(Job() + Dispatchers.Main)
+    var LoggedIn: Boolean = false;
 
     fun SyncDatabase() {
-        subscribeToAuthenticate()
         subscribeToKeyService()
         subscribeToLockService()
-
-        loginUser(auth)
+        getKeys()
     }
 
-    private fun loginUser(auth: Authenticate) {
-
+    private fun getKeys() {
         scope.launch {
             try {
-                auth.login(LoginRequest("Danie", "1234"))
+                keyService.getKeys()
+            } catch (err: Exception) {
+                Log.d("DatabaseSyncService", err.message.toString())
+            }
+        }
+    }
+
+    fun loginUser(username: String, password: String ) {
+        subscribeToAuthenticate()
+        scope.launch {
+            try {
+                auth.login(LoginRequest(username, password))
             } catch (err: Exception) {
                 Log.d("DatabaseSyncService", err.message.toString())
             }
@@ -47,10 +56,10 @@ class DatabaseSyncService @Inject constructor(
             auth.data.collect{ result ->
                 when(result) {
                     is ApiEvent.LoggedIn -> {
+                        LoggedIn = true;
                         keyService.getKeys()
                     }
-                    is ApiEvent.Keys -> { }
-                    is ApiEvent.Locks -> { }
+                    else -> {}
                 }
             }
         }
@@ -60,7 +69,6 @@ class DatabaseSyncService @Inject constructor(
         scope.launch {
             keyService.data.collect{ result ->
                 when(result) {
-                    is ApiEvent.LoggedIn -> { }
                     is ApiEvent.Keys -> {
                         try {
                             for (key in result.data) {
@@ -76,7 +84,7 @@ class DatabaseSyncService @Inject constructor(
                         }
                         lockService.getLocks()
                     }
-                    is ApiEvent.Locks -> { }
+                    else -> {}
                 }
             }
         }
@@ -86,8 +94,6 @@ class DatabaseSyncService @Inject constructor(
         scope.launch {
             lockService.data.collect{ result ->
                 when(result) {
-                    is ApiEvent.LoggedIn -> { }
-                    is ApiEvent.Keys -> { }
                     is ApiEvent.Locks -> {
                         try {
                             for (lock in result.data) {
@@ -103,6 +109,7 @@ class DatabaseSyncService @Inject constructor(
                         }
                         logEventService.syncEventLogs()
                     }
+                    else -> {}
                 }
             }
         }

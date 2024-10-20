@@ -19,12 +19,13 @@ class EventLogService  @Inject constructor(
 
     private val scope = CoroutineScope(Job() + Dispatchers.Main)
 
-    fun logEvent(event: String, keyNumber: Int, lockNumber: Int) {
+    fun logEvent(event: String, keyNumber: Int, lockNumber: Int, battery: String) {
         val eventLog = EventLog(
             timestamp = System.currentTimeMillis()/1000,
             event = event,
             keyNumber = keyNumber,
             lockNumber = lockNumber,
+            battery = battery,
             archived = false)
         appDatabase.eventLogDao().insertAll(eventLog)
         scope.launch {

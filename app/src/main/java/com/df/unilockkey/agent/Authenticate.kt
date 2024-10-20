@@ -34,6 +34,9 @@ class Authenticate @Inject constructor(
                 }
             } else {
                 val code = response.code()
+                data.emit(
+                    ApiEvent.Error(message = code.toString())
+                )
                 Log.d("Login", code.toString())
             }
         } catch (e: HttpException) {

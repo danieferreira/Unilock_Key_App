@@ -20,8 +20,6 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var bluetoothAdapter: BluetoothAdapter
-    @Inject
-    lateinit var databaseSyncService: DatabaseSyncService
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -39,7 +37,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        databaseSyncService.SyncDatabase()
         showBluetoothDialog()
     }
 
