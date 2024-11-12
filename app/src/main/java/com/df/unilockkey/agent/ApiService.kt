@@ -14,16 +14,16 @@ import retrofit2.http.GET
 import retrofit2.http.POST
 
 interface ApiService {
-    @POST("/login")
+    @POST("/api/login")
     suspend fun login(@Body request: LoginRequest): retrofit2.Response<LoginResponse>
 
-    @GET("/key")
+    @GET("/api/key")
     suspend fun getKeys(): retrofit2.Response<Array<Unikey>>
 
-    @GET("/lock")
+    @GET("/api/lock")
     suspend fun getLocks(): retrofit2.Response<Array<Unilock>>
 
-    @POST("/event")
+    @POST("/api/event")
     suspend fun postEventLog(@Body event: EventLog)
 }
 
