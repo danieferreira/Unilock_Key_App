@@ -58,22 +58,25 @@ class KeyInfoViewModel @Inject constructor(
                                             if (lock.lockNumber == lockId.toInt()) {
                                                 setKeyEnabled(true)
                                                 keyValid = "Allowed"
-                                                eventLogService.logEvent(
-                                                    "Allowed",
-                                                    keyId.toInt(),
-                                                    lockId.toInt(),
-                                                    battVoltage
-                                                )
                                                 break
                                             }
                                         }
                                     }
-                                    eventLogService.logEvent(
-                                        "Blocked",
-                                        keyId.toInt(),
-                                        lockId.toInt(),
-                                        battVoltage
-                                    )
+                                    if (keyValid.equals("Allowed")) {
+                                        eventLogService.logEvent(
+                                            "Allowed",
+                                            keyId.toInt(),
+                                            lockId.toInt(),
+                                            battVoltage
+                                        )
+                                    } else {
+                                        eventLogService.logEvent(
+                                            "Blocked",
+                                            keyId.toInt(),
+                                            lockId.toInt(),
+                                            battVoltage
+                                        )
+                                    }
                                 } catch (err: Exception) {
                                     Log.d("KeyInfoViewModel", err.message.toString())
                                 }

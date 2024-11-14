@@ -11,7 +11,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import java.util.Timer
 import javax.inject.Inject
+import kotlin.concurrent.timerTask
 
 class DatabaseSyncService @Inject constructor(
     private val auth: Authenticate,
@@ -24,7 +26,16 @@ class DatabaseSyncService @Inject constructor(
     private val scope = CoroutineScope(Job() + Dispatchers.Main)
     var LoggedIn: Boolean = false;
 
-    fun SyncDatabase() {
+    fun startSync() {
+        val funtimer: Timer = Timer()
+        funtimer.schedule(
+            timerTask()
+            {
+                syncDatabase()
+            }, 100, 30000)
+    }
+
+    fun syncDatabase() {
         subscribeToKeyService()
         subscribeToLockService()
         getKeys()

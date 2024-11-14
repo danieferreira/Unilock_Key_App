@@ -16,10 +16,9 @@ class EventLogService  @Inject constructor(
     private val appDatabase: AppDatabase,
     private var api: ApiService
 ){
-
     private val scope = CoroutineScope(Job() + Dispatchers.Main)
 
-    fun logEvent(event: String, keyNumber: Int, lockNumber: Int, battery: String) {
+    suspend fun logEvent(event: String, keyNumber: Int, lockNumber: Int, battery: String) {
         val eventLog = EventLog(
             timestamp = System.currentTimeMillis()/1000,
             event = event,

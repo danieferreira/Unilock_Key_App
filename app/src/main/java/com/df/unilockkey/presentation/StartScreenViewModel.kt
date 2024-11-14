@@ -37,7 +37,7 @@ class StartScreenViewModel @Inject constructor(
             Log.d("StartScreenViewModel", err.message.toString())
         }
         if (LoggedIn) {
-            databaseSyncService.SyncDatabase()
+            databaseSyncService.startSync()
         }
         return LoggedIn
     }
