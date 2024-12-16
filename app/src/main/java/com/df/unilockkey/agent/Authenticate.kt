@@ -1,18 +1,24 @@
 package com.df.unilockkey.agent
 
+import android.annotation.SuppressLint
+import android.content.Context
+import android.provider.Settings
 import android.util.Log
 import com.df.unilockkey.util.ApiEvent
+import dagger.hilt.android.qualifiers.ApplicationContext
 import jakarta.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import retrofit2.HttpException
 import java.net.UnknownHostException
 
 class Authenticate @Inject constructor(
     private val api: ApiService,
-    private val tokenManager: TokenManager
+    private val tokenManager: TokenManager,
+    @ApplicationContext private val context: Context
 ) {
     private val coroutineScope= CoroutineScope(Dispatchers.Default)
     val data: MutableSharedFlow<ApiEvent<String>> = MutableSharedFlow()
@@ -20,24 +26,30 @@ class Authenticate @Inject constructor(
     suspend fun login(request: LoginRequest) {
         try {
             tokenManager.saveToken("")
-            val response = api.login(request)
-            if (response.isSuccessful) {
-                val body = response.body()
-                if (body != null) {
-                    tokenManager.saveToken(body.token)
-                    Log.d("Login","User logged in")
+            val phoneId = getAdvertisingId(context)
+            if (phoneId != null) {
+                request.phoneId = phoneId
+                val response = api.login(request)
+                if (response.isSuccessful) {
+                    val body = response.body()
+                    if (body != null) {
+                        tokenManager.saveToken(body.token)
+                        Log.d("Login", "User logged in")
+                        coroutineScope.launch {
+                            data.emit(
+                                ApiEvent.LoggedIn(message = "Logged In")
+                            )
+                        }
+                    }
+                } else {
+                    val code = response.code()
                     coroutineScope.launch {
                         data.emit(
-                            ApiEvent.LoggedIn(message = "Logged In")
+                            ApiEvent.Error(message = code.toString())
                         )
                     }
+                    Log.d("Login", code.toString())
                 }
-            } else {
-                val code = response.code()
-                data.emit(
-                    ApiEvent.Error(message = code.toString())
-                )
-                Log.d("Login", code.toString())
             }
         } catch (e: HttpException) {
             val response = e.response()
@@ -49,6 +61,22 @@ class Authenticate @Inject constructor(
             }
         } catch (e: UnknownHostException) {
             Log.d("Login", e.message.toString())
+        }
+    }
+
+    @SuppressLint("HardwareIds")
+    private suspend fun getAdvertisingId(@ApplicationContext context: Context): String? {
+        return withContext(Dispatchers.IO) {
+            try {
+                Settings.Secure.getString(context.getContentResolver(),
+                    Settings.Secure.ANDROID_ID);
+
+//                val adInfo = AdvertisingIdClient.getAdvertisingIdInfo(context)
+//                adInfo.id
+            } catch (e: Exception) {
+                Log.d("getID", e.toString())
+                null
+            }
         }
     }
 }

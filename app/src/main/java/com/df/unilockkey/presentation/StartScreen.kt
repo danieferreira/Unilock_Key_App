@@ -1,5 +1,6 @@
 package com.df.unilockkey.presentation
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -20,12 +21,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+
 
 @Composable
 fun StartScreen(
@@ -35,6 +38,7 @@ fun StartScreen(
 
     var username = remember { mutableStateOf(TextFieldValue()) }
     var password = remember { mutableStateOf(TextFieldValue()) }
+    val mContext = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -115,7 +119,9 @@ fun StartScreen(
                     .clip(CircleShape)
                     .background(Color.Cyan, CircleShape)
                     .clickable {
-                        if (viewModel.login(username.value.text, password.value.text)) {
+                        var message = "Login Failed";
+                        val status = viewModel.login(username.value.text, password.value.text)
+                        if (status == 200) {
                             navController.navigate(Screen.KeyInfoScreen.route) {
                                 popUpTo(Screen.StartScreen.route) {
                                     inclusive = true
@@ -124,6 +130,11 @@ fun StartScreen(
                         } else {
                             password.value = TextFieldValue("")
                             username.value = TextFieldValue("")
+
+                            if (status == 406) {
+                                message = "Please enable Phone in Unilock Access Manager";
+                            }
+                            Toast.makeText(mContext, message, Toast.LENGTH_LONG).show()
                         }
 
                     },

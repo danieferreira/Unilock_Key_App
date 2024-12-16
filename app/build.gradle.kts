@@ -77,6 +77,7 @@ dependencies {
     implementation(libs.transportation.consumer)
     implementation(libs.androidx.espresso.core)
     implementation(libs.androidx.espresso.core)
+    implementation(libs.play.services.ads.identifier)
     ksp(libs.androidx.sqlite.bundled.android)
     ksp(libs.androidx.room.compiler)
     implementation(libs.firebase.firestore.ktx)

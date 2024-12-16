@@ -91,8 +91,8 @@ object AppModule {
         @ApplicationContext context: Context,
         okHttpClient: OkHttpClient
     ): ApiService = Retrofit.Builder()
-        //.baseUrl("http:/192.168.0.178:8090")
-        .baseUrl("https:/unilockserver1.co.za")
+        .baseUrl("http:/192.168.0.177:8090")
+        //.baseUrl("https:/unilockserver1.co.za")
         .client(okHttpClient)
         .addConverterFactory(GsonConverterFactory.create())
         .build()
@@ -102,9 +102,10 @@ object AppModule {
     @Singleton
     fun providesAuthenticate(
         api: ApiService,
-        tokenManager: TokenManager
+        tokenManager: TokenManager,
+        @ApplicationContext context: Context
     ): Authenticate {
-        return Authenticate(api, tokenManager)
+        return Authenticate(api, tokenManager, context)
     }
 
     @Provides

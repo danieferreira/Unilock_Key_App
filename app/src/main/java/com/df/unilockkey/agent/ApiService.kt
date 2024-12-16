@@ -30,6 +30,7 @@ interface ApiService {
 data class LoginRequest(
     val username: String,
     val password: String,
+    var phoneId: String? = null
 )
 
 data class LoginResponse(

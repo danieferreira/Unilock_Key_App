@@ -24,7 +24,7 @@ class EventLogService  @Inject constructor(
             event = event,
             keyNumber = keyNumber,
             lockNumber = lockNumber,
-            battery = battery,
+            battery = battery.replace(',','.'),
             archived = false)
         appDatabase.eventLogDao().insertAll(eventLog)
         scope.launch {

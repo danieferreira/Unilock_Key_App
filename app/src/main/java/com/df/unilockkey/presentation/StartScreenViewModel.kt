@@ -1,6 +1,7 @@
 package com.df.unilockkey.presentation
 
 import android.util.Log
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.df.unilockkey.agent.Authenticate
 import com.df.unilockkey.agent.LoginRequest
@@ -17,18 +18,26 @@ class StartScreenViewModel @Inject constructor(
     private val auth: Authenticate,
 ): ViewModel() {
 
+    var errorMessage = MutableLiveData<String?>("");
+
 
     private var LoggedIn: Boolean = false;
 
-    fun login(username: String, password: String ): Boolean {
+    fun login(username: String, password: String ): Int {
+        var status = 404;
         try {
             runBlocking {
                 auth.login(LoginRequest(username, password))
                 val result = auth.data.first()
                 if (result is ApiEvent.LoggedIn) {
                     LoggedIn = true;
+                    status = 200;
                 }
                 if (result is ApiEvent.Error) {
+                    if (result.message == "406") {
+                        errorMessage.value = "Please enable Phone in Unilock Access Manager";
+                        status = 406
+                    }
                     LoggedIn = false;
                 }
             }
@@ -39,6 +48,6 @@ class StartScreenViewModel @Inject constructor(
         if (LoggedIn) {
             databaseSyncService.startSync()
         }
-        return LoggedIn
+        return status
     }
 }
