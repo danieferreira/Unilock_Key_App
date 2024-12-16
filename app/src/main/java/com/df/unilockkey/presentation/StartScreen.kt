@@ -12,17 +12,24 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -38,7 +45,17 @@ fun StartScreen(
 
     var username = remember { mutableStateOf(TextFieldValue()) }
     var password = remember { mutableStateOf(TextFieldValue()) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
     val mContext = LocalContext.current
+    var snackbarMessage = "Succeed!"
+    val showSnackbar = remember { mutableStateOf(false) }
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    LaunchedEffect(showSnackbar.value) {
+        if (showSnackbar.value)
+            snackbarHostState.showSnackbar(snackbarMessage)
+    }
 
     Column(
         modifier = Modifier
@@ -86,6 +103,9 @@ fun StartScreen(
                 readOnly = false,
                 singleLine = true,
                 isError = false,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(
+                    onDone = {keyboardController?.hide()})
             )
         }
         Row(
@@ -103,6 +123,9 @@ fun StartScreen(
                 readOnly = false,
                 singleLine = true,
                 isError = false,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(
+                    onDone = {keyboardController?.hide()})
             )
         }
 
@@ -134,9 +157,13 @@ fun StartScreen(
                             if (status == 406) {
                                 message = "Please enable Phone in Unilock Access Manager";
                             }
-                            Toast.makeText(mContext, message, Toast.LENGTH_LONG).show()
+                            Toast
+                                .makeText(mContext, message, Toast.LENGTH_LONG)
+                                .show()
+                            // show snackbar with it.error
+                            snackbarMessage = message
+                            showSnackbar.value = true
                         }
-
                     },
                 contentAlignment = Alignment.Center
             ) {
