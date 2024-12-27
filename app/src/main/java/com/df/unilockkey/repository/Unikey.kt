@@ -7,5 +7,12 @@ import androidx.room.PrimaryKey
 data class Unikey(
     @PrimaryKey
     val keyNumber: Int,
-    val locks: ArrayList<Unilock>
+    val locks: ArrayList<Unilock>,
+    val startDate: String?,
+    val duration: Int?,
+    val enabled: Boolean,
+    val timeLimitEnabled: Boolean,
+    val startTime: String?,
+    val endTime: String?
+
 )

@@ -37,7 +37,7 @@ class Authenticate @Inject constructor(
                         Log.d("Login", "User logged in")
                         coroutineScope.launch {
                             data.emit(
-                                ApiEvent.LoggedIn(message = "Logged In")
+                                ApiEvent.LoggedIn(message = "Logged In", data = phoneId)
                             )
                         }
                     }

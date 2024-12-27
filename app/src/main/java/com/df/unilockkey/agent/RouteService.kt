@@ -1,7 +1,7 @@
 package com.df.unilockkey.agent
 
 import android.util.Log
-import com.df.unilockkey.repository.Unilock
+import com.df.unilockkey.repository.Route
 import com.df.unilockkey.util.ApiEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -10,81 +10,82 @@ import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import java.net.UnknownHostException
 
-class LockService(private var api: ApiService) {
-    private val coroutineScope = CoroutineScope(Dispatchers.Default)
-    val locks: MutableSharedFlow<ApiEvent<Array<Unilock>>> = MutableSharedFlow()
-    val lock: MutableSharedFlow<ApiEvent<Unilock>> = MutableSharedFlow()
+class RouteService(private var api: ApiService) {
+    private val coroutineScope= CoroutineScope(Dispatchers.Default)
+    val routes: MutableSharedFlow<ApiEvent<Array<Route>>> = MutableSharedFlow()
+    val route: MutableSharedFlow<ApiEvent<Route>> = MutableSharedFlow()
+
     private var busy: Boolean = false
 
-    suspend fun getLocks() {
+    suspend fun getRoutes() {
         try {
             if (!busy) {
                 busy = true;
-                val response = api.getLocks()
+                val response = api.getRoutes()
                 if (response.isSuccessful) {
                     val body = response.body()
-                    for (lock in body!!) {
-                        Log.d("Locks:", "Lock: " + lock.lockNumber.toString())
+                    for (route in body!!) {
+                        Log.d("Routes:", "Route: " + route.name)
                     }
                     coroutineScope.launch {
-                        locks.emit(
-                            ApiEvent.Locks(data = body)
+                        routes.emit(
+                            ApiEvent.Routes(data = body)
                         )
                     }
                 } else {
                     val code = response.code()
-                    Log.d("Locks:", code.toString())
+                    Log.d("Routes:", code.toString())
                 }
             }
         } catch (e: HttpException) {
             val response = e.response()
             val errorCode = e.code()
             if (response != null) {
-                Log.d("Locks:", response.message() + ":" + errorCode.toString())
+                Log.d("Routes:", response.message() + ":" + errorCode.toString())
             } else {
-                Log.d("Locks:", errorCode.toString())
+                Log.d("Routes:", errorCode.toString())
             }
         } catch (e: UnknownHostException) {
-            Log.d("Locks:", e.message.toString())
+            Log.d("Routes:", e.message.toString())
         } catch (e: Exception) {
-            Log.d("Locks:", e.message.toString())
+            Log.d("Routes:", e.message.toString())
         } finally {
-            busy = false
+            busy = false;
         }
     }
 
-    suspend fun getLock(id: Int) {
+    suspend fun getRoute(id: Int) {
         try {
             if (!busy) {
                 busy = true;
-                val response = api.getLock(id)
+                val response = api.getRoute(id)
                 if (response.isSuccessful) {
-                    val thisLock = response.body()
-                    if (thisLock != null) {
-                        Log.d("Lock:", "Lock: " + thisLock.lockNumber)
+                    val thisRoute = response.body()
+                    if (thisRoute != null) {
+                        Log.d("Route:", "Route: " + thisRoute.id)
                         coroutineScope.launch {
-                            lock.emit(
-                                ApiEvent.Lock(data = thisLock)
+                            route.emit(
+                                ApiEvent.Route(data = thisRoute)
                             )
                         }
                     }
                 } else {
                     val code = response.code()
-                    Log.d("Lock:", code.toString())
+                    Log.d("Route:", code.toString())
                 }
             }
         } catch (e: HttpException) {
             val response = e.response()
             val errorCode = e.code()
             if (response != null) {
-                Log.d("Lock:", response.message() + ":" + errorCode.toString())
+                Log.d("Route:", response.message() + ":" + errorCode.toString())
             } else {
-                Log.d("Lock:", errorCode.toString())
+                Log.d("Route:", errorCode.toString())
             }
         } catch (e: UnknownHostException) {
-            Log.d("Lock:", e.message.toString())
+            Log.d("Route:", e.message.toString())
         } catch (e: Exception) {
-            Log.d("Lock:", e.message.toString())
+            Log.d("Route:", e.message.toString())
         } finally {
             busy = false
         }

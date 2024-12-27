@@ -3,6 +3,8 @@ package com.df.unilockkey.agent
 import android.content.Context
 import android.content.SharedPreferences
 import com.df.unilockkey.repository.EventLog
+import com.df.unilockkey.repository.Phone
+import com.df.unilockkey.repository.Route
 import com.df.unilockkey.repository.Unikey
 import com.df.unilockkey.repository.Unilock
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -12,6 +14,7 @@ import okhttp3.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
+import retrofit2.http.Path
 
 interface ApiService {
     @POST("/api/login")
@@ -25,6 +28,19 @@ interface ApiService {
 
     @POST("/api/event")
     suspend fun postEventLog(@Body event: EventLog)
+
+    @GET("/api/route")
+    suspend fun getRoutes(): retrofit2.Response<Array<Route>>
+
+    @GET("/api/phone/{phoneId}")
+    suspend fun getPhone(@Path("phoneId") phoneId: String): retrofit2.Response<Phone>
+
+    @GET("/api/route/{id}")
+    suspend fun getRoute(@Path("id") id: Int): retrofit2.Response<Route>
+
+    @GET("/api/lock/{lockNumber}")
+    suspend fun getLock(@Path("lockNumber") lockNumber: Int): retrofit2.Response<Unilock>
+
 }
 
 data class LoginRequest(

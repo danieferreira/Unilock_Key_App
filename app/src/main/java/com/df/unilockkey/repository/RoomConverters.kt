@@ -1,11 +1,13 @@
 package com.df.unilockkey.repository
 
 import android.icu.util.Calendar
+import androidx.room.ProvidedTypeConverter
 import androidx.room.TypeConverter
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.google.type.DateTime
 
-
+@ProvidedTypeConverter
 class RoomConverters {
 
     //for date and time convertions
@@ -76,4 +78,87 @@ class RoomConverters {
         )
     }
 
+    @TypeConverter
+    fun fromBranch(value: Branch?): String? {
+        return Gson().toJson(value)
+    }
+    @TypeConverter
+    fun toBranch(value: String?): Branch {
+        return  Gson().fromJson(
+            value,
+            object : TypeToken<Branch?>() {}.type
+        )
+    }
+
+    @TypeConverter
+    fun fromRoute(value: Route?): String? {
+        return Gson().toJson(value)
+    }
+    @TypeConverter
+    fun toRoute(value: String?): Route {
+        return  Gson().fromJson(
+            value,
+            object : TypeToken<Route?>() {}.type
+        )
+    }
+
+    @TypeConverter
+    fun fromPhone(value: Phone?): String? {
+        return Gson().toJson(value)
+    }
+    @TypeConverter
+    fun toPhone(value: String?): Phone {
+        return  Gson().fromJson(
+            value,
+            object : TypeToken<Phone?>() {}.type
+        )
+    }
+
+    @TypeConverter
+    fun fromDateTime(value: DateTime?): String? {
+        return Gson().toJson(value)
+    }
+    @TypeConverter
+    fun toDateTime(value: String?): DateTime {
+        return  Gson().fromJson(
+            value,
+            object : TypeToken<DateTime?>() {}.type
+        )
+    }
+
+    @TypeConverter
+    fun fromUnilockUser(value: UnilockUser?): String? {
+        return Gson().toJson(value)
+    }
+    @TypeConverter
+    fun toUnilockUser(value: String?): UnilockUser {
+        return  Gson().fromJson(
+            value,
+            object : TypeToken<UnilockUser?>() {}.type
+        )
+    }
+
+    @TypeConverter
+    fun fromRouteList(listOfString: ArrayList<Route>): String? {
+        return Gson().toJson(listOfString)
+    }
+    @TypeConverter
+    fun toRouteList(list: String?): ArrayList<Route> {
+        return Gson().fromJson(
+            list,
+            object : TypeToken<ArrayList<Route?>?>() {}.type
+        )
+    }
+
+    @TypeConverter
+    fun fromPhoneList(listOfString: ArrayList<Phone>): String? {
+        return Gson().toJson(listOfString)
+    }
+    @TypeConverter
+    fun toPhoneList(list: String?): ArrayList<Phone> {
+        return Gson().fromJson(
+            list,
+            object : TypeToken<ArrayList<Phone?>?>() {}.type
+        )
+    }
 }

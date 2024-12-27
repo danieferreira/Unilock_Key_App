@@ -6,11 +6,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.df.unilockkey.agent.PhoneService
 import com.df.unilockkey.data.ConnectionState
 import com.df.unilockkey.data.KeyReceiverManager
 import com.df.unilockkey.repository.AppDatabase
 import com.df.unilockkey.repository.DataRepository
 import com.df.unilockkey.service.EventLogService
+import com.df.unilockkey.util.ApiEvent
 import com.df.unilockkey.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
@@ -21,17 +23,18 @@ class KeyInfoViewModel @Inject constructor(
     private val keyReceiverManager: KeyReceiverManager,
     private val dataRepository: DataRepository,
     private val appDatabase: AppDatabase,
-    private val eventLogService: EventLogService
+    private val eventLogService: EventLogService,
+    private val phoneService: PhoneService
 ): ViewModel() {
 
     var initialisingMessage by mutableStateOf<String?>(null)
     var errorMessage by mutableStateOf<String?>(null)
     var keyId by mutableStateOf<String>("")
     var lockId by mutableStateOf<String>("")
+    var routeNames by mutableStateOf<String>("")
     var battVoltage by mutableStateOf<String>("")
     var keyVersion by mutableStateOf<String>("")
     var keyValid by mutableStateOf<String>("")
-    var checked by mutableStateOf(false)
     var connectionState by mutableStateOf<ConnectionState>(ConnectionState.Unitialised)
 
     private fun subscribeToChanged() {
@@ -109,6 +112,31 @@ class KeyInfoViewModel @Inject constructor(
         }
     }
 
+    private fun subscribeToPhoneService() {
+        viewModelScope.launch {
+            phoneService.data.collect{ result ->
+                when(result) {
+                    is ApiEvent.Phone -> {
+                        try {
+                            if (result.data != null) {
+                                val phone = result.data
+                                routeNames = "";
+                                for (route in phone.routes)
+                                {
+                                    routeNames += route.name + "\r\n"
+                                }
+                            }
+                        } catch (err: Exception) {
+                            errorMessage = err.message.toString()
+                            Log.d("KeyInfoViewModel", err.message.toString())
+                        }
+                    }
+                    else -> {}
+                }
+            }
+        }
+    }
+
     fun disconnect() {
         keyReceiverManager.disconnect()
     }
@@ -120,12 +148,12 @@ class KeyInfoViewModel @Inject constructor(
     fun initialiseConnection() {
         errorMessage = null
         subscribeToChanged()
+        subscribeToPhoneService()
         keyReceiverManager.startReceiving()
     }
 
     fun setKeyEnabled(enabled: Boolean) {
         dataRepository.keyEnabled = enabled
-        checked = enabled
     }
 
     override fun onCleared() {

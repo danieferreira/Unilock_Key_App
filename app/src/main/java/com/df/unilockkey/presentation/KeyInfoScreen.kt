@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -106,7 +105,7 @@ fun KeyInfoScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
@@ -116,6 +115,19 @@ fun KeyInfoScreen(
                 fontSize = 35.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.Red
+            )
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            //Spacer
+            Text(
+                text=viewModel.routeNames,
+                fontWeight = FontWeight.Bold,
             )
         }
         Row(
@@ -144,7 +156,6 @@ fun KeyInfoScreen(
                         if (viewModel.initialisingMessage != null) {
                             Text(text = viewModel.initialisingMessage!!)
                         }
-
                     }
                 } else if (!permissionState.allPermissionsGranted) {
                     Text(
@@ -198,22 +209,6 @@ fun KeyInfoScreen(
                         )                    }
                 }
             }
-        }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            Text(
-                "Enable Key:"
-            )
-            Checkbox(
-                enabled = false,
-                checked = viewModel.checked,
-                onCheckedChange = { viewModel.setKeyEnabled(it) }
-            )
         }
     }
 }

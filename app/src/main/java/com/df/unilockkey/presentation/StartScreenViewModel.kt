@@ -32,6 +32,7 @@ class StartScreenViewModel @Inject constructor(
                 if (result is ApiEvent.LoggedIn) {
                     LoggedIn = true;
                     status = 200;
+                    databaseSyncService.startSync(result.data)
                 }
                 if (result is ApiEvent.Error) {
                     if (result.message == "406") {
@@ -45,9 +46,7 @@ class StartScreenViewModel @Inject constructor(
         } catch (err: Exception) {
             Log.d("StartScreenViewModel", err.message.toString())
         }
-        if (LoggedIn) {
-            databaseSyncService.startSync()
-        }
+
         return status
     }
 }

@@ -9,6 +9,8 @@ import com.df.unilockkey.agent.AuthInterceptor
 import com.df.unilockkey.agent.Authenticate
 import com.df.unilockkey.agent.KeyService
 import com.df.unilockkey.agent.LockService
+import com.df.unilockkey.agent.PhoneService
+import com.df.unilockkey.agent.RouteService
 import com.df.unilockkey.agent.TokenManager
 import com.df.unilockkey.data.KeyReceiverManager
 import com.df.unilockkey.data.ble.KeyBLEReceiverManager
@@ -110,6 +112,22 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun providesPhoneService(
+        api: ApiService,
+    ): PhoneService {
+        return PhoneService(api)
+    }
+
+    @Provides
+    @Singleton
+    fun providesRouteService(
+        api: ApiService,
+    ): RouteService {
+        return RouteService(api)
+    }
+
+    @Provides
+    @Singleton
     fun providesKeyService(
         api: ApiService,
     ): KeyService {
@@ -130,10 +148,12 @@ object AppModule {
         auth: Authenticate,
         keyService: KeyService,
         lockService: LockService,
+        routeService: RouteService,
+        phoneService: PhoneService,
         appDatabase: AppDatabase,
         eventLogService: EventLogService
     ): DatabaseSyncService {
-        return DatabaseSyncService(auth, keyService, lockService, appDatabase, eventLogService)
+        return DatabaseSyncService(auth, keyService, lockService, routeService, phoneService, appDatabase, eventLogService)
     }
 
     @Provides

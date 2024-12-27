@@ -7,6 +7,13 @@ import androidx.room.PrimaryKey
 data class Unilock  (
     @PrimaryKey
     val lockNumber: Int,
-    val keys: ArrayList<Unikey>
+    val keys: ArrayList<Unikey>,
+    val terminalId: String?,
+    val branch: Branch?,
+    val route: Route?,
+    val startDate: String?,
+    val endDate: String?,
+    val activatedDate: String?,
+    val duration: Int?
 )
 

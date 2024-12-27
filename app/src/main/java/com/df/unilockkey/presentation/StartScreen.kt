@@ -30,6 +30,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType.Companion.Password
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -103,7 +105,9 @@ fun StartScreen(
                 readOnly = false,
                 singleLine = true,
                 isError = false,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+
+                keyboardOptions = KeyboardOptions(
+                    imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(
                     onDone = {keyboardController?.hide()})
             )
@@ -123,7 +127,10 @@ fun StartScreen(
                 readOnly = false,
                 singleLine = true,
                 isError = false,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = Password,
+                    imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(
                     onDone = {keyboardController?.hide()})
             )
