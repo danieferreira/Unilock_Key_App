@@ -13,7 +13,9 @@ interface PhoneDao {
     @Query("SELECT * FROM phone WHERE id = :id LIMIT 1")
     fun findById(id: String): Phone
     @Insert
-    fun insert(vararg phone: Phone)
+    fun insertAll(vararg phone: Phone)
+    @Insert
+    fun insert(phone: Phone)
     @Delete
     fun delete(phone: Phone)
     @Update

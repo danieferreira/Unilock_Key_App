@@ -135,13 +135,13 @@ class DatabaseSyncService @Inject constructor(
         scope.launch {
             lockService.lock.collect{ result ->
                 when(result) {
-                    is ApiEvent.Locks -> {
+                    is ApiEvent.Lock -> {
                         try {
                             if(result.data != null) {
                                 val lock = result.data
                                 val tmpLock = appDatabase.unilockDao().findByLockNumber(lock.lockNumber)
                                 if (tmpLock == null) {
-                                    appDatabase.unilockDao().insertAll(lock)
+                                    appDatabase.unilockDao().insert(lock)
                                 } else {
                                     appDatabase.unilockDao().update(lock)
                                 }

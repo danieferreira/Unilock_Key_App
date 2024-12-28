@@ -12,6 +12,6 @@ data class EventLog(
     var lockNumber: Int = 0,
     var event: String = "",
     var archived: Boolean = false,
-    val battery: String= "",
+    var battery: String= "",
   )
 

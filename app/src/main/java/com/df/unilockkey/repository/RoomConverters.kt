@@ -1,13 +1,13 @@
 package com.df.unilockkey.repository
 
 import android.icu.util.Calendar
-import androidx.room.ProvidedTypeConverter
+
 import androidx.room.TypeConverter
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.google.type.DateTime
 
-@ProvidedTypeConverter
+
 class RoomConverters {
 
     //for date and time convertions

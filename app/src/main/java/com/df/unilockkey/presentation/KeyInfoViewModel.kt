@@ -11,6 +11,7 @@ import com.df.unilockkey.data.ConnectionState
 import com.df.unilockkey.data.KeyReceiverManager
 import com.df.unilockkey.repository.AppDatabase
 import com.df.unilockkey.repository.DataRepository
+import com.df.unilockkey.repository.EventLog
 import com.df.unilockkey.service.EventLogService
 import com.df.unilockkey.util.ApiEvent
 import com.df.unilockkey.util.Resource
@@ -36,6 +37,7 @@ class KeyInfoViewModel @Inject constructor(
     var keyVersion by mutableStateOf<String>("")
     var keyValid by mutableStateOf<String>("")
     var connectionState by mutableStateOf<ConnectionState>(ConnectionState.Unitialised)
+    private var eventLog: EventLog = EventLog()
 
     private fun subscribeToChanged() {
         viewModelScope.launch {
@@ -56,35 +58,71 @@ class KeyInfoViewModel @Inject constructor(
                                 keyValid = "Blocked"
                                 try {
                                     val key = appDatabase.unikeyDao().findByKeyNumber(keyId.toInt())
-                                    if (key != null) {
-                                        for (lock in key.locks) {
-                                            if (lock.lockNumber == lockId.toInt()) {
-                                                setKeyEnabled(true)
-                                                keyValid = "Allowed"
-                                                break
+                                    if (key == null) {
+                                        keyValid = "Key not found"
+                                    } else {
+                                        if (!key.enabled) {
+                                            keyValid = "Key Blocked"
+                                        } else {
+                                            //TODO: Check the start and end times if requires
+                                            if (key.timeLimitEnabled) {
+
+                                            }
+                                            val locks = appDatabase.unilockDao().getAll()
+                                            for (tmp in locks) {
+                                                Log.d("Lock", tmp.lockNumber.toString() + "")
+                                            }
+                                            val lock = appDatabase.unilockDao().findByLockNumber(lockId.toInt())
+                                            if (lock == null) {
+                                                keyValid = "Lock not found"
+                                            } else {
+                                                //TODO: Check Start and End Date
+
+                                                //TODO: Check if the lock is on this route
+                                                if (lock.route != null) {
+                                                    val route = appDatabase.routeDao().findById(lock.route.id)
+                                                    if (route == null) {
+                                                        keyValid = "Route not found"
+                                                    } else {
+                                                        for (tmpLock in route.locks) {
+                                                            if (tmpLock.lockNumber == lock.lockNumber) {
+                                                                setKeyEnabled(true)
+                                                                keyValid = "Allowed"
+                                                                break
+                                                            }
+                                                        }
+                                                    }
+                                                } else {
+                                                    setKeyEnabled(true)
+                                                    keyValid = "Allowed"
+                                                }
                                             }
                                         }
                                     }
-                                    if (keyValid.equals("Allowed")) {
-                                        eventLogService.logEvent(
-                                            "Allowed",
-                                            keyId.toInt(),
-                                            lockId.toInt(),
-                                            battVoltage
-                                        )
-                                    } else {
-                                        eventLogService.logEvent(
-                                            "Blocked",
-                                            keyId.toInt(),
-                                            lockId.toInt(),
-                                            battVoltage
-                                        )
+                                    //Log this event
+                                    if ((!eventLog.event.equals(keyValid)) ||
+                                        (eventLog.lockNumber != lockId.toInt()) ||
+                                        eventLog.keyNumber != keyId.toInt()) {
+
+                                        eventLog.event = keyValid
+                                        eventLog.keyNumber = keyId.toInt()
+                                        eventLog.lockNumber = lockId.toInt()
+                                        eventLog.battery = battVoltage.replace(',','.')
+
+                                        eventLogService.logEvent(eventLog)
                                     }
                                 } catch (err: Exception) {
                                     Log.d("KeyInfoViewModel", err.message.toString())
                                 }
                             } else {
-                                eventLogService.logEvent("Connected", keyId.toInt(), 0, battVoltage)
+                                if (eventLog.lockNumber != lockId.toInt()) {
+                                    eventLog.event = "Connected"
+                                    eventLog.keyNumber = keyId.toInt()
+                                    eventLog.lockNumber = 0
+                                    eventLog.battery = battVoltage.replace(',','.')
+
+                                    eventLogService.logEvent(eventLog)
+                                }
                             }
                             if (result.data.keyVersion != "") {
                                 keyVersion = result.data.keyVersion

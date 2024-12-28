@@ -32,6 +32,15 @@ class EventLogService  @Inject constructor(
         }
     }
 
+    suspend fun logEvent(eventLog: EventLog) {
+        eventLog.timestamp = System.currentTimeMillis()/1000
+        eventLog.archived = false
+        appDatabase.eventLogDao().insertAll(eventLog)
+        scope.launch {
+            syncEventLogs()
+        }
+    }
+
     suspend fun syncEventLogs() {
         try {
             val logs = appDatabase.eventLogDao().getAllByArchive(false)

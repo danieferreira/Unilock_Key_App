@@ -17,6 +17,9 @@ interface UnilockDao {
     @Insert
     fun insertAll(vararg locks: Unilock)
 
+    @Insert
+    fun insert(lock: Unilock)
+
     @Delete
     fun delete(lock: Unilock)
 

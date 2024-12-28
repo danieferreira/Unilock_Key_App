@@ -8,7 +8,7 @@ import androidx.room.TypeConverters
 import kotlin.concurrent.Volatile
 
 
-@Database(entities = [Unikey::class, Unilock::class, EventLog::class, Branch::class, Route::class, Phone::class, UnilockUser::class], version = 12)
+@Database(entities = [Unikey::class, Unilock::class, EventLog::class, Branch::class, Route::class, Phone::class, UnilockUser::class], version = 13)
 @TypeConverters(RoomConverters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun unilockDao(): UnilockDao
@@ -35,7 +35,6 @@ abstract class AppDatabase : RoomDatabase() {
                 )
                     .allowMainThreadQueries()
                     .fallbackToDestructiveMigration()
-                    .addTypeConverter(RoomConverters())
                     .build()
                 INSTANCE = instance
                 instance
