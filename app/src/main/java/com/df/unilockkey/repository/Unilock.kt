@@ -13,7 +13,11 @@ data class Unilock  (
     val route: Route?,
     val startDate: String?,
     val endDate: String?,
-    val activatedDate: String?,
-    val duration: Int?
-)
+    var activatedDate: String?,
+    var activeKey: Unikey?,
+    val duration: Int?,
+    var archived: Boolean = false
+) {
+
+}
 

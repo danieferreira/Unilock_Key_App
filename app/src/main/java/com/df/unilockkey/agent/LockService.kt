@@ -61,7 +61,7 @@ class LockService(private var api: ApiService) {
                 if (response.isSuccessful) {
                     val thisLock = response.body()
                     if (thisLock != null) {
-                        Log.d("Lock:", "Lock: " + thisLock.lockNumber)
+                        Log.d("Lock:", "Lock: " + thisLock.lockNumber+","+thisLock.activatedDate)
                         coroutineScope.launch {
                             lock.emit(
                                 ApiEvent.Lock(data = thisLock)

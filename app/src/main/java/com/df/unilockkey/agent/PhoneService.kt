@@ -12,8 +12,8 @@ import java.net.UnknownHostException
 
 class PhoneService(private var api: ApiService) {
     private val coroutineScope= CoroutineScope(Dispatchers.Default)
-    val data: MutableSharedFlow<ApiEvent<Phone>> = MutableSharedFlow()
     private var busy: Boolean = false
+    val data: MutableSharedFlow<ApiEvent<Phone>> = MutableSharedFlow()
 
     suspend fun getPhone(phoneId: String) {
         try {

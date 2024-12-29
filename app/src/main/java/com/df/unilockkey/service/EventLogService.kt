@@ -17,6 +17,7 @@ class EventLogService  @Inject constructor(
     private var api: ApiService
 ){
     private val scope = CoroutineScope(Job() + Dispatchers.Main)
+    private var eventLogbusy = false;
 
     suspend fun logEvent(event: String, keyNumber: Int, lockNumber: Int, battery: String) {
         val eventLog = EventLog(
@@ -42,25 +43,31 @@ class EventLogService  @Inject constructor(
     }
 
     suspend fun syncEventLogs() {
-        try {
-            val logs = appDatabase.eventLogDao().getAllByArchive(false)
-            for (log in logs) {
-                api.postEventLog(log)
-                log.archived = true
-                appDatabase.eventLogDao().update(log)
+        if (!eventLogbusy) {
+            try {
+                eventLogbusy = true
+                val logs = appDatabase.eventLogDao().getAllByArchive(false)
+                for (log in logs) {
+                    log.archived = true
+                    api.postEventLog(log)
+                    appDatabase.eventLogDao().update(log)
+                    Log.d("syncLocks:", "Archive: " + log.id + ":" + log.event)
+                }
+            } catch (e: HttpException) {
+                val response = e.response()
+                val errorCode = e.code()
+                if (response != null) {
+                    Log.d("EventLogService:", response.message() + ":" + errorCode.toString())
+                } else {
+                    Log.d("EventLogService:", errorCode.toString())
+                }
+            } catch (e: UnknownHostException) {
+                Log.d("EventLogService:", e.message.toString())
+            } catch (e: Exception) {
+                Log.d("EventLogService:", e.message.toString())
+            } finally {
+                eventLogbusy = false;
             }
-        } catch (e: HttpException) {
-            val response = e.response()
-            val errorCode = e.code()
-            if (response != null) {
-                Log.d("EventLogService:", response.message() + ":" + errorCode.toString())
-            } else {
-                Log.d("EventLogService:", errorCode.toString())
-            }
-        } catch (e: UnknownHostException) {
-            Log.d("EventLogService:", e.message.toString())
-        } catch (e: Exception) {
-            Log.d("EventLogService:", e.message.toString())
         }
     }
 }

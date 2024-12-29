@@ -23,7 +23,7 @@ class RoomConverters {
         return Gson().toJson(value)
     }
     @TypeConverter
-    fun toUnikey(value: String?): Unikey {
+    fun toUnikey(value: String?): Unikey? {
         return  Gson().fromJson(
             value,
             object : TypeToken<Unikey?>() {}.type

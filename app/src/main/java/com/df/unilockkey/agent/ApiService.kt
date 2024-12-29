@@ -41,6 +41,8 @@ interface ApiService {
     @GET("/api/lock/{lockNumber}")
     suspend fun getLock(@Path("lockNumber") lockNumber: Int): retrofit2.Response<Unilock>
 
+    @POST("/api/lock")
+    suspend fun postLock(@Body lock: Unilock)
 }
 
 data class LoginRequest(

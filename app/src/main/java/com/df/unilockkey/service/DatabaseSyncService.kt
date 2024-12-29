@@ -1,6 +1,7 @@
 package com.df.unilockkey.service
 
 import android.util.Log
+import com.df.unilockkey.agent.ApiService
 import com.df.unilockkey.agent.Authenticate
 import com.df.unilockkey.agent.KeyService
 import com.df.unilockkey.agent.LockService
@@ -13,6 +14,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import retrofit2.HttpException
+import java.net.UnknownHostException
 import java.util.Timer
 import javax.inject.Inject
 import kotlin.concurrent.timerTask
@@ -24,10 +27,13 @@ class DatabaseSyncService @Inject constructor(
     private val routeService: RouteService,
     private val phoneService: PhoneService,
     private val appDatabase: AppDatabase,
-    private val logEventService: EventLogService
+    private val logEventService: EventLogService,
+    private var api: ApiService
 ) {
 
     private val scope = CoroutineScope(Job() + Dispatchers.Main)
+
+    private var lockBusy = false;
     var LoggedIn: Boolean = false;
     var phoneId: String? = null
 
@@ -65,6 +71,7 @@ class DatabaseSyncService @Inject constructor(
     private fun syncEventLogs() {
         scope.launch {
             try {
+                syncLocks()
                 logEventService.syncEventLogs()
             } catch (err: Exception) {
                 Log.d("DatabaseSyncService", err.message.toString())
@@ -254,6 +261,35 @@ class DatabaseSyncService @Inject constructor(
                     }
                     else -> {}
                 }
+            }
+        }
+    }
+
+    suspend fun syncLocks() {
+        if (!lockBusy) {
+            try {
+                lockBusy = true
+                val locks = appDatabase.unilockDao().getAllByArchive(false)
+                for (lock in locks) {
+                    lock.archived = true
+                    api.postLock(lock)
+                    appDatabase.unilockDao().update(lock)
+                    Log.d("syncLocks:", "Archive: " +  lock.lockNumber.toString())
+                }
+            } catch (e: HttpException) {
+                val response = e.response()
+                val errorCode = e.code()
+                if (response != null) {
+                    Log.d("syncLocks:", response.message() + ":" + errorCode.toString())
+                } else {
+                    Log.d("syncLocks:", errorCode.toString())
+                }
+            } catch (e: UnknownHostException) {
+                Log.d("syncLocks:", e.message.toString())
+            } catch (e: Exception) {
+                Log.d("syncLocks:", e.message.toString())
+            } finally {
+                lockBusy = false
             }
         }
     }

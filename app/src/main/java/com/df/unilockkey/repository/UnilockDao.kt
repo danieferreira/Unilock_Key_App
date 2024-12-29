@@ -14,6 +14,9 @@ interface UnilockDao {
     @Query("SELECT * FROM unilock WHERE lockNumber = :lockNumber LIMIT 1")
     fun findByLockNumber(lockNumber: Int): Unilock
 
+    @Query("SELECT * FROM unilock WHERE archived = :archived")
+    fun getAllByArchive(archived: Boolean): List<Unilock>
+
     @Insert
     fun insertAll(vararg locks: Unilock)
 

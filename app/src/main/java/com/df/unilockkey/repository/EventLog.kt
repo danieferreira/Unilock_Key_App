@@ -7,6 +7,7 @@ import androidx.room.PrimaryKey
 data class EventLog(
     @PrimaryKey(autoGenerate = true)
     var id: Int = 0,
+    var phoneId: String = "",
     var timestamp: Long = 0,
     var keyNumber: Int = 0,
     var lockNumber: Int = 0,
