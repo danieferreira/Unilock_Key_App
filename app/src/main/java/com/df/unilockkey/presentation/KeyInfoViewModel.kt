@@ -65,7 +65,6 @@ class KeyInfoViewModel @Inject constructor(
                             if (result.data.lockId != "") {
                                 lockId = result.data.lockId
                                 setKeyEnabled(false)
-                                keyValid = "Blocked"
                                 try {
                                     val key = appDatabase.unikeyDao().findByKeyNumber(keyId.toInt())
                                     if (key == null) {
@@ -93,6 +92,8 @@ class KeyInfoViewModel @Inject constructor(
                                                         startDate = startDate.plus(2, java.time.temporal.ChronoUnit.HOURS)
                                                         endDate = endDate.plus(2, java.time.temporal.ChronoUnit.HOURS)
                                                         endDate = endDate.plus(1, java.time.temporal.ChronoUnit.DAYS)
+                                                        startDate = startDate.truncatedTo(java.time.temporal.ChronoUnit.DAYS)
+                                                        endDate = endDate.truncatedTo(java.time.temporal.ChronoUnit.DAYS)
                                                         if (date.isAfter(startDate)) {
                                                             if (date.isBefore(endDate)) {
                                                                 validDate = true
@@ -113,21 +114,28 @@ class KeyInfoViewModel @Inject constructor(
                                                             if (currentPhone == null) {
                                                                 keyValid = "Phone not found"
                                                             } else {
-                                                                keyValid = "Route Invalid"
+                                                                var validRoute = false
                                                                 for (tmpRoute in currentPhone!!.routes) {
                                                                     if (tmpRoute.id == route.id) {
                                                                         //Check if the lock is on this route
                                                                         for (tmpLock in route.locks) {
                                                                             if (tmpLock.lockNumber == lock.lockNumber) {
+                                                                                validRoute = true
                                                                                 //Check the Key Duration if not zero
                                                                                 var keyExpired = false
-                                                                                if( (lock.duration != null)  && (lock.duration != 0) && (lock.activatedDate != null)) {
-                                                                                    val activated = LocalDateTime.parse(lock.activatedDate, sdf)
-                                                                                    if (activated != null) {
+                                                                                if ((lock.duration != null)  && (lock.duration != 0)) {
+                                                                                    if ((lock.activatedDate == null) || (lock.activeKey == null) || (lock.activeKey!!.keyNumber != key.keyNumber) ){
+                                                                                        lock.activatedDate = sdf.format(LocalDateTime.now())
+                                                                                        lock.activeKey = key
+                                                                                        lock.archived = false
+                                                                                        appDatabase.unilockDao().update(lock)
+                                                                                        syncDatabase.syncLocks()
+                                                                                    } else {
+                                                                                        val activated = LocalDateTime.parse(lock.activatedDate, sdf)
                                                                                         if ((lock.activatedDate != null) && (lock.activeKey != null)) {
                                                                                             if (lock.activeKey!!.keyNumber == key.keyNumber) {
-                                                                                                val timeLeft = ChronoUnit.MINUTES.between(date, activated)
-                                                                                                if (timeLeft > lock.duration) {
+                                                                                                val timeLeft = ChronoUnit.MINUTES.between(activated, date)
+                                                                                                if (timeLeft >= lock.duration) {
                                                                                                     keyExpired = true
                                                                                                 }
                                                                                             }
@@ -137,18 +145,16 @@ class KeyInfoViewModel @Inject constructor(
                                                                                 if (keyExpired) {
                                                                                     keyValid = "Key Expired"
                                                                                 } else {
-                                                                                    lock.activatedDate = sdf.format(LocalDateTime.now())
-                                                                                    lock.activeKey = key
-                                                                                    lock.archived = false
-                                                                                    appDatabase.unilockDao().update(lock)
-                                                                                    syncDatabase.syncLocks()
                                                                                     setKeyEnabled(true)
                                                                                     keyValid = "Allowed"
-                                                                                    break
                                                                                 }
+                                                                                break
                                                                             }
                                                                         }
                                                                     }
+                                                                }
+                                                                if (!validRoute) {
+                                                                    keyValid = "Route Invalid"
                                                                 }
                                                             }
                                                         }
