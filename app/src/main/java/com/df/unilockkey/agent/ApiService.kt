@@ -20,6 +20,9 @@ interface ApiService {
     @POST("/api/login")
     suspend fun login(@Body request: LoginRequest): retrofit2.Response<LoginResponse>
 
+    @POST("/api/refresh")
+    suspend fun refreshLogin(@Body request: RefreshRequest): retrofit2.Response<LoginResponse>
+
     @GET("/api/key")
     suspend fun getKeys(): retrofit2.Response<Array<Unikey>>
 
@@ -51,8 +54,13 @@ data class LoginRequest(
     var phoneId: String? = null
 )
 
+data class RefreshRequest (
+    val refreshToken: String?
+)
+
 data class LoginResponse(
     val token: String,
+    val refreshToken: String?
 )
 
 class AuthInterceptor @Inject constructor(): Interceptor {
@@ -89,6 +97,14 @@ class TokenManager @Inject constructor(@ApplicationContext context: Context) {
 
     fun getRefreshToken(): String? {
         return prefs.getString("refresh", null)
+    }
+
+    fun saveRefreshToken(refreshToken: String?) {
+        val editor = prefs.edit()
+
+        refreshToken?.let {
+            editor.putString("refresh", refreshToken).apply()
+        }
     }
 
 }

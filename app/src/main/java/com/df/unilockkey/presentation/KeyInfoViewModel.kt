@@ -189,6 +189,7 @@ class KeyInfoViewModel @Inject constructor(
                                         (eventLog.lockNumber != lockId.toInt()) ||
                                         eventLog.keyNumber != keyId.toInt()) {
 
+                                        eventLog.phoneId = currentPhone!!.id
                                         eventLog.event = keyValid
                                         eventLog.keyNumber = keyId.toInt()
                                         eventLog.lockNumber = lockId.toInt()
@@ -200,11 +201,13 @@ class KeyInfoViewModel @Inject constructor(
                                     Log.d("KeyInfoViewModel", err.message.toString())
                                 }
                             } else {
-                                if (eventLog.lockNumber != lockId.toInt()) {
+                                if (eventLog.keyNumber != keyId.toInt()) {
+                                    //Key without a lock
+                                    eventLog.phoneId = currentPhone!!.id
                                     eventLog.event = "Connected"
                                     eventLog.keyNumber = keyId.toInt()
                                     eventLog.lockNumber = 0
-                                    eventLog.battery = battVoltage.replace(',','.')
+                                    eventLog.battery = battVoltage.replace(',', '.')
 
                                     eventLogService.logEvent(eventLog)
                                 }
@@ -212,8 +215,8 @@ class KeyInfoViewModel @Inject constructor(
 
                         } catch (err: Exception) {
                             Log.d("KeyInfoViewModel", err.message.toString())
-                            eventLog.event = err.message.toString()
-                            eventLogService.logEvent(eventLog)
+//                            eventLog.event = err.message.toString()
+//                            eventLogService.logEvent(eventLog)
                         }
                     }
                     is Resource.Loading -> {
@@ -225,6 +228,7 @@ class KeyInfoViewModel @Inject constructor(
                         keyVersion = ""
                         keyValid = ""
                         setKeyEnabled(false)
+                        eventLog = EventLog()
                     }
                     is Resource.Error -> {
                         connectionState = ConnectionState.Unitialised
@@ -245,7 +249,6 @@ class KeyInfoViewModel @Inject constructor(
                                 currentPhone = result.data
                                 routeNames = ""
                                 if (currentPhone != null) {
-                                    eventLog.phoneId = currentPhone!!.id
                                     for (route in currentPhone!!.routes) {
                                         routeNames += route.name + "\r\n"
                                     }

@@ -14,6 +14,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import retrofit2.HttpException
 import java.net.UnknownHostException
+import java.util.Timer
+import kotlin.concurrent.timerTask
 
 class Authenticate @Inject constructor(
     private val api: ApiService,
@@ -21,11 +23,13 @@ class Authenticate @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     private val coroutineScope= CoroutineScope(Dispatchers.Default)
+    private val refreshtimer: Timer = Timer()
     val data: MutableSharedFlow<ApiEvent<String>> = MutableSharedFlow()
 
     suspend fun login(request: LoginRequest) {
         try {
             tokenManager.saveToken("")
+            tokenManager.saveRefreshToken("")
             val phoneId = getAdvertisingId(context)
             if (phoneId != null) {
                 request.phoneId = phoneId
@@ -34,6 +38,12 @@ class Authenticate @Inject constructor(
                     val body = response.body()
                     if (body != null) {
                         tokenManager.saveToken(body.token)
+                        tokenManager.saveRefreshToken(body.refreshToken)
+                        refreshtimer.schedule(
+                            timerTask()
+                            {
+                                coroutineScope.launch { refreshLogin()}
+                            }, 30*60*1000)
                         Log.d("Login", "User logged in")
                         coroutineScope.launch {
                             data.emit(
@@ -63,6 +73,47 @@ class Authenticate @Inject constructor(
             Log.d("Login", e.message.toString())
         }
     }
+
+    private suspend fun refreshLogin() {
+        try {
+            tokenManager.saveToken("")
+            tokenManager.saveRefreshToken("")
+            val request = RefreshRequest(tokenManager.getRefreshToken())
+            val response = api.refreshLogin(request)
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null) {
+                    tokenManager.saveToken(body.token)
+                    tokenManager.saveRefreshToken(body.refreshToken)
+                    refreshtimer.schedule(
+                        timerTask()
+                        {
+                            coroutineScope.launch { refreshLogin()}
+                        }, 30*60*1000)
+                    Log.d("RefreshLogin", "User refreshed")
+                }
+            } else {
+                val code = response.code()
+                coroutineScope.launch {
+                    data.emit(
+                        ApiEvent.Error(message = code.toString())
+                    )
+                }
+                Log.d("refreshLogin", code.toString())
+            }
+        } catch (e: HttpException) {
+            val response = e.response()
+            val errorCode = e.code()
+            if (response != null) {
+                Log.d("refreshLogin", response.message() + ":" + errorCode.toString())
+            } else {
+                Log.d("refreshLogin", errorCode.toString())
+            }
+        } catch (e: UnknownHostException) {
+            Log.d("refreshLogin", e.message.toString())
+        }
+    }
+
 
     @SuppressLint("HardwareIds")
     private suspend fun getAdvertisingId(@ApplicationContext context: Context): String? {

@@ -93,8 +93,8 @@ object AppModule {
         @ApplicationContext context: Context,
         okHttpClient: OkHttpClient
     ): ApiService = Retrofit.Builder()
-        .baseUrl("http:/192.168.0.177:8090")
-        //.baseUrl("https:/unilockserver1.co.za")
+        //.baseUrl("http:/192.168.0.177:8090")
+        .baseUrl("https:/unilockserver1.co.za")
         .client(okHttpClient)
         .addConverterFactory(GsonConverterFactory.create())
         .build()
