@@ -43,7 +43,7 @@ class Authenticate @Inject constructor(
                             timerTask()
                             {
                                 coroutineScope.launch { refreshLogin()}
-                            }, 30*60*1000)
+                            }, 10*60*1000)
                         Log.d("Login", "User logged in")
                         coroutineScope.launch {
                             data.emit(
@@ -74,7 +74,7 @@ class Authenticate @Inject constructor(
         }
     }
 
-    private suspend fun refreshLogin() {
+    suspend fun refreshLogin() {
         try {
             tokenManager.saveToken("")
             tokenManager.saveRefreshToken("")

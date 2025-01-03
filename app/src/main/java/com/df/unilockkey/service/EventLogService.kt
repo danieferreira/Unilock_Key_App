@@ -2,6 +2,7 @@ package com.df.unilockkey.service
 
 import android.util.Log
 import com.df.unilockkey.agent.ApiService
+import com.df.unilockkey.agent.Authenticate
 import com.df.unilockkey.repository.AppDatabase
 import com.df.unilockkey.repository.EventLog
 import kotlinx.coroutines.CoroutineScope
@@ -14,7 +15,8 @@ import javax.inject.Inject
 
 class EventLogService  @Inject constructor(
     private val appDatabase: AppDatabase,
-    private var api: ApiService
+    private var api: ApiService,
+    private val auth: Authenticate,
 ){
     private val scope = CoroutineScope(Job() + Dispatchers.Main)
     private var eventLogbusy = false;
@@ -61,6 +63,7 @@ class EventLogService  @Inject constructor(
                 } else {
                     Log.d("EventLogService:", errorCode.toString())
                 }
+                scope.launch { auth.refreshLogin()}
             } catch (e: UnknownHostException) {
                 Log.d("EventLogService:", e.message.toString())
             } catch (e: Exception) {

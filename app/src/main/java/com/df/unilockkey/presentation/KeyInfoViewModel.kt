@@ -83,8 +83,8 @@ class KeyInfoViewModel @Inject constructor(
                                                     val startDate = LocalDateTime.parse(key.startTime, sdf)
                                                     val endDate = LocalDateTime.parse(key.endTime, sdf)
                                                     if ((startDate != null) && (endDate != null)) {
-                                                        val startTime = startDate.plus(2, ChronoUnit.HOURS).toLocalTime()
-                                                        val endTime = endDate.plus(2, ChronoUnit.HOURS).toLocalTime()
+                                                        val startTime = startDate.toLocalTime()
+                                                        val endTime = endDate.toLocalTime()
                                                         val timeNow = date.toLocalTime()
                                                         if ((timeNow.isBefore(startTime)) || (timeNow.isAfter(endTime))) {
                                                             keyLimited = true

@@ -161,8 +161,9 @@ object AppModule {
     @Singleton
     fun providesEventLogService(
         appDatabase: AppDatabase,
-        api: ApiService
+        api: ApiService,
+        auth: Authenticate
     ): EventLogService {
-        return EventLogService(appDatabase, api)
+        return EventLogService(appDatabase, api, auth)
     }
 }
