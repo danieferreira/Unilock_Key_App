@@ -31,7 +31,7 @@ class KeyInfoViewModel @Inject constructor(
     private val appDatabase: AppDatabase,
     private val eventLogService: EventLogService,
     private val phoneService: PhoneService,
-    private val syncDatabase: DatabaseSyncService
+    private val syncDatabase: DatabaseSyncService,
 ): ViewModel() {
 
     var initialisingMessage by mutableStateOf<String?>(null)
@@ -44,7 +44,10 @@ class KeyInfoViewModel @Inject constructor(
     var keyValid by mutableStateOf<String>("")
     var connectionState by mutableStateOf<ConnectionState>(ConnectionState.Unitialised)
     private var eventLog: EventLog = EventLog()
+    private var event: String = ""
     private var currentPhone: Phone? = null
+    private var lockCount = 0
+    private var currentLock = 0
 
     private fun subscribeToChanged() {
         viewModelScope.launch {
@@ -72,9 +75,11 @@ class KeyInfoViewModel @Inject constructor(
                                     val key = appDatabase.unikeyDao().findByKeyNumber(keyId.toInt())
                                     if (key == null) {
                                         keyValid = "Key not found"
+                                        event = "Key not found"
                                     } else {
                                         if (!key.enabled) {
                                             keyValid = "Key Blocked"
+                                            event = "Key Blocked, Key not Enabled"
                                         } else {
                                             //Check the start and end times if requires
                                             var keyLimited = false
@@ -88,6 +93,7 @@ class KeyInfoViewModel @Inject constructor(
                                                         val timeNow = date.toLocalTime()
                                                         if ((timeNow.isBefore(startTime)) || (timeNow.isAfter(endTime))) {
                                                             keyLimited = true
+                                                            event = "Key Time Limited, $startTime - $endTime"
                                                         }
                                                     }
                                                 }
@@ -95,107 +101,124 @@ class KeyInfoViewModel @Inject constructor(
                                             if (keyLimited) {
                                                 keyValid = "Key Time Limited"
                                             } else {
-                                                val lock = appDatabase.unilockDao().findByLockNumber(lockId.toInt())
-                                                if (lock == null) {
-                                                    keyValid = "Lock not found"
+                                                if (lockId.toInt() != currentLock) {
+                                                    currentLock = lockId.toInt()
+                                                    lockCount++
+                                                }
+                                                if (lockCount > 2) {
+                                                    keyValid="No Connection"
+                                                    event = "No Connection after $lockCount locks accessed"
                                                 } else {
-                                                    //Check Start and End Date
-                                                    var validDate = false
+                                                    val lock = appDatabase.unilockDao().findByLockNumber(lockId.toInt())
+                                                    if (lock == null) {
+                                                        keyValid = "Lock not found"
+                                                        event = "Lock not found"
+                                                    } else {
+                                                        //Check Start and End Date
+                                                        var validDate = false
 
-                                                    if ((lock.startDate != null) && (lock.endDate != null)) {
-                                                        var startDate = LocalDateTime.parse(lock.startDate, sdf)
-                                                        var endDate = LocalDateTime.parse(lock.endDate, sdf)
-                                                        if ((startDate != null) && (endDate != null)) {
-                                                            startDate = startDate.plus(2, ChronoUnit.HOURS)
-                                                            endDate = endDate.plus(2, ChronoUnit.HOURS)
-                                                            endDate = endDate.plus(1, ChronoUnit.DAYS)
-                                                            startDate = startDate.truncatedTo(ChronoUnit.DAYS)
-                                                            endDate = endDate.truncatedTo(ChronoUnit.DAYS)
-                                                            if (date.isAfter(startDate)) {
-                                                                if (date.isBefore(endDate)) {
+                                                        if ((lock.startDate != null) && (lock.endDate != null)) {
+                                                            var startDate = LocalDateTime.parse(lock.startDate, sdf)
+                                                            var endDate = LocalDateTime.parse(lock.endDate, sdf)
+                                                            if ((startDate != null) && (endDate != null)) {
+                                                                startDate = startDate.plus(2, ChronoUnit.HOURS)
+                                                                endDate = endDate.plus(2, ChronoUnit.HOURS)
+                                                                endDate = endDate.plus(1, ChronoUnit.DAYS)
+                                                                startDate = startDate.truncatedTo(ChronoUnit.DAYS)
+                                                                endDate = endDate.truncatedTo(ChronoUnit.DAYS)
+                                                                if ((date.isAfter(startDate)) && (date.isBefore(endDate))) {
                                                                     validDate = true
+                                                                } else {
+                                                                    event = "Lock Expired, $startDate - $endDate"
                                                                 }
                                                             }
                                                         }
-                                                    }
-                                                    if (!validDate) {
-                                                        keyValid = "Lock Expired"
-                                                    } else {
-                                                        //Check the route
-                                                        if (lock.route != null) {
-                                                            val route = appDatabase.routeDao().findById(lock.route.id)
-                                                            if (route == null) {
-                                                                keyValid = "Route not found"
-                                                            } else {
-                                                                //Check if route is on this phone
-                                                                if (currentPhone == null) {
-                                                                    keyValid = "Phone not found"
+                                                        if (!validDate) {
+                                                            keyValid = "Lock Expired"
+                                                        } else {
+                                                            //Check the route
+                                                            if (lock.route != null) {
+                                                                val route = appDatabase.routeDao().findById(lock.route.id)
+                                                                if (route == null) {
+                                                                    keyValid = "Route not found"
+                                                                    event = "Route not found, Route ID: ${lock.route.id} "
                                                                 } else {
-                                                                    var validRoute = false
-                                                                    for (tmpRoute in currentPhone!!.routes) {
-                                                                        if (tmpRoute.id == route.id) {
-                                                                            //Check if the lock is on this route
-                                                                            for (tmpLock in route.locks) {
-                                                                                if (tmpLock.lockNumber == lock.lockNumber) {
-                                                                                    validRoute = true
-                                                                                    //Check the Key Duration if not zero
-                                                                                    var keyExpired = false
-                                                                                    if ((lock.duration != null) && (lock.duration != 0)) {
-                                                                                        if ((lock.activatedDate == null) || (lock.activeKey == null) || (lock.activeKey!!.keyNumber != key.keyNumber)) {
-                                                                                            lock.activatedDate = sdf.format(LocalDateTime.now())
-                                                                                            lock.activeKey = key
-                                                                                            lock.archived = false
-                                                                                            appDatabase.unilockDao().update(lock)
-                                                                                            syncDatabase.syncLocks()
-                                                                                        } else {
-                                                                                            val activated = LocalDateTime.parse(lock.activatedDate, sdf)
-                                                                                            if ((lock.activatedDate != null) && (lock.activeKey != null)) {
-                                                                                                if (lock.activeKey!!.keyNumber == key.keyNumber) {
-                                                                                                    val timeLeft = ChronoUnit.MINUTES.between(activated, date)
-                                                                                                    if (timeLeft >= lock.duration) {
-                                                                                                        keyExpired = true
+                                                                    //Check if route is on this phone
+                                                                    if (currentPhone == null) {
+                                                                        keyValid = "Phone not found"
+                                                                        event = "Phone not found"
+                                                                    } else {
+                                                                        var validRoute = false
+                                                                        for (tmpRoute in currentPhone!!.routes) {
+                                                                            if (tmpRoute.id == route.id) {
+                                                                                //Check if the lock is on this route
+                                                                                for (tmpLock in route.locks) {
+                                                                                    if (tmpLock.lockNumber == lock.lockNumber) {
+                                                                                        validRoute = true
+                                                                                        //Check the Key Duration if not zero
+                                                                                        var keyExpired = false
+                                                                                        if ((lock.duration != null) && (lock.duration != 0)) {
+                                                                                            if ((lock.activatedDate == null) || (lock.activeKey == null) || (lock.activeKey!!.keyNumber != key.keyNumber)) {
+                                                                                                lock.activatedDate = sdf.format(LocalDateTime.now())
+                                                                                                lock.activeKey = key
+                                                                                                lock.archived = false
+                                                                                                appDatabase.unilockDao().update(lock)
+                                                                                                syncDatabase.syncLocks()
+                                                                                            } else {
+                                                                                                val activated = LocalDateTime.parse(lock.activatedDate, sdf)
+                                                                                                if ((lock.activatedDate != null) && (lock.activeKey != null)) {
+                                                                                                    if (lock.activeKey!!.keyNumber == key.keyNumber) {
+                                                                                                        val timeLeft = ChronoUnit.MINUTES.between(activated, date)
+                                                                                                        if (timeLeft >= lock.duration) {
+                                                                                                            keyExpired = true
+                                                                                                            event = "Key Expired, $activated - $lock.duration minutes"
+                                                                                                        }
                                                                                                     }
                                                                                                 }
                                                                                             }
                                                                                         }
+                                                                                        if (keyExpired) {
+                                                                                            keyValid = "Key Expired"
+                                                                                        } else {
+                                                                                            setKeyEnabled(true)
+                                                                                            keyValid = "Allowed"
+                                                                                            event = "Allowed"
+                                                                                        }
+                                                                                        break
                                                                                     }
-                                                                                    if (keyExpired) {
-                                                                                        keyValid = "Key Expired"
-                                                                                    } else {
-                                                                                        setKeyEnabled(true)
-                                                                                        keyValid = "Allowed"
-                                                                                    }
-                                                                                    break
                                                                                 }
                                                                             }
                                                                         }
-                                                                    }
-                                                                    if (!validRoute) {
-                                                                        keyValid = "Route Invalid"
+                                                                        if (!validRoute) {
+                                                                            keyValid = "Route Invalid"
+                                                                            event = "${route.name} Route Invalid"
+                                                                        }
                                                                     }
                                                                 }
+                                                            } else {
+                                                                setKeyEnabled(true)
+                                                                keyValid = "Allowed"
+                                                                event = "Allowed"
                                                             }
-                                                        } else {
-                                                            setKeyEnabled(true)
-                                                            keyValid = "Allowed"
                                                         }
                                                     }
                                                 }
                                             }
                                         }
-                                    }
-                                    //Log this event
-                                    if ((!eventLog.event.equals(keyValid)) ||
-                                        (eventLog.lockNumber != lockId.toInt()) ||
-                                        eventLog.keyNumber != keyId.toInt()) {
+                                        //Log this event
+                                        if ((!eventLog.event.equals(event)) ||
+                                            (eventLog.lockNumber != lockId.toInt()) ||
+                                            eventLog.keyNumber != keyId.toInt()
+                                        ) {
 
-                                        eventLog.phoneId = currentPhone!!.id
-                                        eventLog.event = keyValid
-                                        eventLog.keyNumber = keyId.toInt()
-                                        eventLog.lockNumber = lockId.toInt()
-                                        eventLog.battery = battVoltage.replace(',','.')
+                                            eventLog.phoneId = currentPhone!!.id
+                                            eventLog.event = event
+                                            eventLog.keyNumber = keyId.toInt()
+                                            eventLog.lockNumber = lockId.toInt()
+                                            eventLog.battery = battVoltage.replace(',', '.')
 
-                                        eventLogService.logEvent(eventLog)
+                                            eventLogService.logEvent(eventLog)
+                                        }
                                     }
                                 } catch (err: Exception) {
                                     Log.d("KeyInfoViewModel", err.message.toString())
@@ -203,8 +226,9 @@ class KeyInfoViewModel @Inject constructor(
                             } else {
                                 if (eventLog.keyNumber != keyId.toInt()) {
                                     //Key without a lock
+                                    event = "Connected"
                                     eventLog.phoneId = currentPhone!!.id
-                                    eventLog.event = "Connected"
+                                    eventLog.event = event
                                     eventLog.keyNumber = keyId.toInt()
                                     eventLog.lockNumber = 0
                                     eventLog.battery = battVoltage.replace(',', '.')
@@ -215,8 +239,8 @@ class KeyInfoViewModel @Inject constructor(
 
                         } catch (err: Exception) {
                             Log.d("KeyInfoViewModel", err.message.toString())
-//                            eventLog.event = err.message.toString()
-//                            eventLogService.logEvent(eventLog)
+                            //                            eventLog.event = err.message.toString()
+                            //                            eventLogService.logEvent(eventLog)
                         }
                     }
                     is Resource.Loading -> {
@@ -229,6 +253,7 @@ class KeyInfoViewModel @Inject constructor(
                         keyValid = ""
                         setKeyEnabled(false)
                         eventLog = EventLog()
+                        event = ""
                     }
                     is Resource.Error -> {
                         connectionState = ConnectionState.Unitialised
@@ -253,6 +278,9 @@ class KeyInfoViewModel @Inject constructor(
                                         routeNames += route.name + "\r\n"
                                     }
                                 }
+                                //Reset Lock Count
+                                lockCount = 0
+                                currentLock = 0
                             }
                         } catch (err: Exception) {
                             errorMessage = err.message.toString()

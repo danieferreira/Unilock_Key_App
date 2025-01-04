@@ -23,7 +23,7 @@ class Authenticate @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     private val coroutineScope= CoroutineScope(Dispatchers.Default)
-    private val refreshtimer: Timer = Timer()
+    private val refreshTimer: Timer = Timer()
     val data: MutableSharedFlow<ApiEvent<String>> = MutableSharedFlow()
 
     suspend fun login(request: LoginRequest) {
@@ -39,7 +39,7 @@ class Authenticate @Inject constructor(
                     if (body != null) {
                         tokenManager.saveToken(body.token)
                         tokenManager.saveRefreshToken(body.refreshToken)
-                        refreshtimer.schedule(
+                        refreshTimer.schedule(
                             timerTask()
                             {
                                 coroutineScope.launch { refreshLogin()}
@@ -85,11 +85,16 @@ class Authenticate @Inject constructor(
                 if (body != null) {
                     tokenManager.saveToken(body.token)
                     tokenManager.saveRefreshToken(body.refreshToken)
-                    refreshtimer.schedule(
+                    refreshTimer.schedule(
                         timerTask()
                         {
                             coroutineScope.launch { refreshLogin()}
                         }, 30*60*1000)
+                    coroutineScope.launch {
+                        data.emit(
+                            ApiEvent.LoggedIn(message = "Logged In",)
+                        )
+                    }
                     Log.d("RefreshLogin", "User refreshed")
                 }
             } else {
@@ -120,7 +125,7 @@ class Authenticate @Inject constructor(
         return withContext(Dispatchers.IO) {
             try {
                 Settings.Secure.getString(context.getContentResolver(),
-                    Settings.Secure.ANDROID_ID);
+                    Settings.Secure.ANDROID_ID)
 
 //                val adInfo = AdvertisingIdClient.getAdvertisingIdInfo(context)
 //                adInfo.id
