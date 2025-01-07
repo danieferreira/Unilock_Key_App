@@ -10,7 +10,7 @@ import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import java.net.UnknownHostException
 
-class PhoneService(private var api: ApiService) {
+class PhoneService(private var api: ApiService, private var auth: Authenticate) {
     private val coroutineScope= CoroutineScope(Dispatchers.Default)
     private var busy: Boolean = false
     val data: MutableSharedFlow<ApiEvent<Phone>> = MutableSharedFlow()
@@ -33,6 +33,7 @@ class PhoneService(private var api: ApiService) {
                 } else {
                     val code = response.code()
                     Log.d("Phone:", code.toString())
+                    coroutineScope.launch { auth.refreshLogin()}
                 }
             }
         } catch (e: HttpException) {

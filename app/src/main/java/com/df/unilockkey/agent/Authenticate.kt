@@ -2,8 +2,10 @@ package com.df.unilockkey.agent
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Intent
 import android.provider.Settings
 import android.util.Log
+import androidx.test.core.app.ApplicationProvider.getApplicationContext
 import com.df.unilockkey.util.ApiEvent
 import dagger.hilt.android.qualifiers.ApplicationContext
 import jakarta.inject.Inject
@@ -16,6 +18,7 @@ import retrofit2.HttpException
 import java.net.UnknownHostException
 import java.util.Timer
 import kotlin.concurrent.timerTask
+
 
 class Authenticate @Inject constructor(
     private val api: ApiService,
@@ -43,7 +46,7 @@ class Authenticate @Inject constructor(
                             timerTask()
                             {
                                 coroutineScope.launch { refreshLogin()}
-                            }, 10*60*1000)
+                            }, 30*60*1000)
                         Log.d("Login", "User logged in")
                         coroutineScope.launch {
                             data.emit(
@@ -76,8 +79,9 @@ class Authenticate @Inject constructor(
 
     suspend fun refreshLogin() {
         try {
-            tokenManager.saveToken("")
-            tokenManager.saveRefreshToken("")
+            if (tokenManager.getRefreshToken().isNullOrBlank())  {
+                restartApp()
+            }
             val request = RefreshRequest(tokenManager.getRefreshToken())
             val response = api.refreshLogin(request)
             if (response.isSuccessful) {
@@ -92,7 +96,7 @@ class Authenticate @Inject constructor(
                         }, 30*60*1000)
                     coroutineScope.launch {
                         data.emit(
-                            ApiEvent.LoggedIn(message = "Logged In",)
+                            ApiEvent.LoggedIn(message = "Logged In")
                         )
                     }
                     Log.d("RefreshLogin", "User refreshed")
@@ -134,5 +138,14 @@ class Authenticate @Inject constructor(
                 null
             }
         }
+    }
+
+    private fun restartApp() {
+        val ctx = getApplicationContext<Context>()
+        val pm = ctx.packageManager
+        val intent = pm.getLaunchIntentForPackage(ctx.packageName)
+        val mainIntent = Intent.makeRestartActivityTask(intent!!.component)
+        ctx.startActivity(mainIntent)
+        Runtime.getRuntime().exit(0)
     }
 }

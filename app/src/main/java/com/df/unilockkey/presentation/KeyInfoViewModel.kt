@@ -85,6 +85,7 @@ class KeyInfoViewModel @Inject constructor(
                                             var keyLimited = false
                                             if (key.timeLimitEnabled) {
                                                 if ((key.startTime != null) && (key.endTime != null)) {
+                                                    val timeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
                                                     val startDate = LocalDateTime.parse(key.startTime, sdf)
                                                     val endDate = LocalDateTime.parse(key.endTime, sdf)
                                                     if ((startDate != null) && (endDate != null)) {
@@ -93,7 +94,7 @@ class KeyInfoViewModel @Inject constructor(
                                                         val timeNow = date.toLocalTime()
                                                         if ((timeNow.isBefore(startTime)) || (timeNow.isAfter(endTime))) {
                                                             keyLimited = true
-                                                            event = "Key Time Limited, $startTime - $endTime"
+                                                            event = "Key Time Limited, ${timeFormatter.format(startTime)} - ${timeFormatter.format(endTime)}"
                                                         }
                                                     }
                                                 }
@@ -101,14 +102,21 @@ class KeyInfoViewModel @Inject constructor(
                                             if (keyLimited) {
                                                 keyValid = "Key Time Limited"
                                             } else {
-                                                if (lockId.toInt() != currentLock) {
-                                                    currentLock = lockId.toInt()
-                                                    lockCount++
+                                                var forcedConnection = true;
+                                                if (currentPhone != null) {
+                                                    if (currentPhone!!.forceConnection) {
+                                                        if (lockId.toInt() != currentLock) {
+                                                            currentLock = lockId.toInt()
+                                                            lockCount++
+                                                        }
+                                                        if (lockCount > currentPhone!!.numberLocks) {
+                                                            keyValid = "No Connection"
+                                                            event = "No Connection after $lockCount locks accessed"
+                                                            forcedConnection = false;
+                                                        }
+                                                    }
                                                 }
-                                                if (lockCount > 2) {
-                                                    keyValid="No Connection"
-                                                    event = "No Connection after $lockCount locks accessed"
-                                                } else {
+                                                if (forcedConnection) {
                                                     val lock = appDatabase.unilockDao().findByLockNumber(lockId.toInt())
                                                     if (lock == null) {
                                                         keyValid = "Lock not found"
@@ -118,6 +126,7 @@ class KeyInfoViewModel @Inject constructor(
                                                         var validDate = false
 
                                                         if ((lock.startDate != null) && (lock.endDate != null)) {
+                                                            val dateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
                                                             var startDate = LocalDateTime.parse(lock.startDate, sdf)
                                                             var endDate = LocalDateTime.parse(lock.endDate, sdf)
                                                             if ((startDate != null) && (endDate != null)) {
@@ -129,7 +138,7 @@ class KeyInfoViewModel @Inject constructor(
                                                                 if ((date.isAfter(startDate)) && (date.isBefore(endDate))) {
                                                                     validDate = true
                                                                 } else {
-                                                                    event = "Lock Expired, $startDate - $endDate"
+                                                                    event = "Lock Expired, ${dateFormatter.format(startDate)} - ${dateFormatter.format(endDate)}"
                                                                 }
                                                             }
                                                         }
@@ -168,10 +177,11 @@ class KeyInfoViewModel @Inject constructor(
                                                                                                 val activated = LocalDateTime.parse(lock.activatedDate, sdf)
                                                                                                 if ((lock.activatedDate != null) && (lock.activeKey != null)) {
                                                                                                     if (lock.activeKey!!.keyNumber == key.keyNumber) {
+                                                                                                        val dateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
                                                                                                         val timeLeft = ChronoUnit.MINUTES.between(activated, date)
                                                                                                         if (timeLeft >= lock.duration) {
                                                                                                             keyExpired = true
-                                                                                                            event = "Key Expired, $activated - $lock.duration minutes"
+                                                                                                            event = "Key Expired, ${dateFormatter.format(activated)} - ${lock.duration} minutes"
                                                                                                         }
                                                                                                     }
                                                                                                 }

@@ -114,8 +114,9 @@ object AppModule {
     @Singleton
     fun providesPhoneService(
         api: ApiService,
+        auth: Authenticate
     ): PhoneService {
-        return PhoneService(api)
+        return PhoneService(api, auth)
     }
 
     @Provides

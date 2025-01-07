@@ -10,6 +10,8 @@ data class Phone(
     val number: String?,
     val description: String?,
     val active: Boolean,
+    val forceConnection: Boolean,
+    val numberLocks: Int,
     val user: UnilockUser,
     val routes: ArrayList<Route>
 )
