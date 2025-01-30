@@ -1,5 +1,6 @@
 package com.df.unilockkey.service
 
+import android.content.Context
 import android.util.Log
 import com.df.unilockkey.agent.ApiService
 import com.df.unilockkey.agent.Authenticate
@@ -9,16 +10,18 @@ import com.df.unilockkey.agent.LoginRequest
 import com.df.unilockkey.agent.PhoneService
 import com.df.unilockkey.agent.RouteService
 import com.df.unilockkey.repository.AppDatabase
+import com.df.unilockkey.repository.EventLog
 import com.df.unilockkey.util.ApiEvent
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
-import java.net.UnknownHostException
 import java.util.Timer
 import javax.inject.Inject
 import kotlin.concurrent.timerTask
+
 
 class DatabaseSyncService @Inject constructor(
     private val auth: Authenticate,
@@ -28,7 +31,8 @@ class DatabaseSyncService @Inject constructor(
     private val phoneService: PhoneService,
     private val appDatabase: AppDatabase,
     private val logEventService: EventLogService,
-    private var api: ApiService
+    private var api: ApiService,
+    @ApplicationContext private val context: Context
 ) {
 
     private val scope = CoroutineScope(Job() + Dispatchers.Main)
@@ -39,6 +43,8 @@ class DatabaseSyncService @Inject constructor(
 
     fun startSync(thisPhoneId: String?) {
         phoneId = thisPhoneId
+        lockBusy = false;
+        LoggedIn = false;
         syncDatabase()
         val funtimer: Timer = Timer()
         funtimer.schedule(
@@ -200,8 +206,10 @@ class DatabaseSyncService @Inject constructor(
                                 } else {
                                     appDatabase.routeDao().update(route)
                                 }
-                                for (lock in route.locks) {
-                                    lockService.getLock(lock.lockNumber)
+                                if (route.locks != null) {
+                                    for (lock in route.locks) {
+                                        lockService.getLock(lock.lockNumber)
+                                    }
                                 }
                             }
                         } catch (err: Exception) {
@@ -250,8 +258,10 @@ class DatabaseSyncService @Inject constructor(
                                 } else {
                                     appDatabase.phoneDao().update(phone)
                                 }
-                                for (route in phone.routes) {
-                                    routeService.getRoute(route.id)
+                                if (phone.routes != null) {
+                                    for (route in phone.routes) {
+                                        routeService.getRoute(route.id)
+                                    }
                                 }
                             }
                         } catch (err: Exception) {
@@ -272,7 +282,7 @@ class DatabaseSyncService @Inject constructor(
                 val locks = appDatabase.unilockDao().getAllByArchive(false)
                 for (lock in locks) {
                     lock.archived = true
-                    api.postLock(lock)
+                    api.putLock(lock.lockNumber, lock)
                     appDatabase.unilockDao().update(lock)
                     Log.d("syncLocks:", "Archive: " +  lock.lockNumber.toString())
                 }
@@ -282,15 +292,25 @@ class DatabaseSyncService @Inject constructor(
                 if (response != null) {
                     Log.d("syncLocks:", response.message() + ":" + errorCode.toString())
                 } else {
-                    Log.d("syncLocks:", errorCode.toString())
+                    Log.d("syncLocks:", "ErrorCode: $errorCode")
                 }
-            } catch (e: UnknownHostException) {
-                Log.d("syncLocks:", e.message.toString())
             } catch (e: Exception) {
                 Log.d("syncLocks:", e.message.toString())
+                createEvent("syncLocks: " + e.message.toString())
             } finally {
                 lockBusy = false
             }
         }
+    }
+
+    private suspend fun createEvent(msg: String) {
+        val eventLog = EventLog()
+        eventLog.phoneId = "log"
+        eventLog.event = msg
+        eventLog.keyNumber = 0
+        eventLog.lockNumber = 0
+        eventLog.battery = "0.0"
+
+        logEventService.logEvent(eventLog)
     }
 }

@@ -88,6 +88,7 @@ class KeyBLEReceiverManager @Inject constructor(
                                     keyId = "",
                                     lockId = "",
                                     battVoltage = 0.0,
+                                    lockStatus = 0,
                                     keyVersion = "",
                                     date = null,
                                     ConnectionState.Disconnected
@@ -160,13 +161,24 @@ class KeyBLEReceiverManager @Inject constructor(
             with(characteristic) {
                 when (uuid) {
                     UUID.fromString(CHAR1_UUID) -> {
+                        var lockIdStr: String = String(value, Charsets.UTF_8)
+                        var statusStr: String = "0000"
+                        Log.d("KeyBLEReceiverManager", "Message: $lockIdStr")
+                        val tmpIndex = value.indexOf(':'.code.toByte())
+                        if (tmpIndex != -1) {
+                            statusStr = lockIdStr.substring(tmpIndex + 1)
+                            lockIdStr= lockIdStr.substring(0, tmpIndex)
+                            Log.d("KeyBLEReceiverManager", "Status: $statusStr")
+                        }
+
                         coroutineScope.launch {
                             data.emit(
                                 Resource.Success(
                                     data = KeyInfoResult(
                                         keyId = "",
-                                        lockId = String(value, Charsets.UTF_8),
+                                        lockId = lockIdStr,
                                         battVoltage = 0.0,
+                                        lockStatus = statusStr.toInt(16),
                                         keyVersion = "",
                                         date = null,
                                         ConnectionState.Connected
@@ -215,7 +227,14 @@ class KeyBLEReceiverManager @Inject constructor(
                     if (battVoltStr.isNotEmpty()) {
                         battVolt = battVoltStr.toDouble();
                     }
-                    val version = valueStr.substring(16)
+                    var statusStr = valueStr.substring(16, 20)
+                    var version: String
+                    if (statusStr.startsWith("EK")) {
+                        statusStr = "0"
+                        version = valueStr.substring(16)
+                    } else {
+                        version = valueStr.substring(21)
+                    }
 
                     coroutineScope.launch {
                         data.emit(
@@ -224,6 +243,7 @@ class KeyBLEReceiverManager @Inject constructor(
                                     keyId = keyNo.toString(),
                                     lockId = "",
                                     battVoltage = battVolt,
+                                    lockStatus = statusStr.toInt(16),
                                     keyVersion = version,
                                     date = null,
                                     ConnectionState.Connected
@@ -241,6 +261,7 @@ class KeyBLEReceiverManager @Inject constructor(
                                     keyId = "",
                                     lockId = "",
                                     battVoltage = 0.0,
+                                    lockStatus = 0  ,
                                     keyVersion = "",
                                     date = getKeyDate(value),
                                     ConnectionState.Connected
@@ -403,6 +424,7 @@ class KeyBLEReceiverManager @Inject constructor(
                         keyId = "",
                         lockId = "",
                         battVoltage = 0.0,
+                        lockStatus = 0,
                         keyVersion = "",
                         date = null,
                         ConnectionState.Disconnected

@@ -6,8 +6,8 @@ import androidx.room.PrimaryKey
 @Entity
 data class Route (
     @PrimaryKey
-    val id: Int,
-    val name: String,
-    val locks: ArrayList<Unilock>,
-    val branch: Branch
+    val id: Int = 0,
+    val name: String = "",
+    val locks: ArrayList<Unilock>? = ArrayList<Unilock>(),
+    val branch: Branch? = Branch()
 )

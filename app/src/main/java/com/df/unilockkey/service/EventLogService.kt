@@ -39,9 +39,9 @@ class EventLogService  @Inject constructor(
         eventLog.timestamp = System.currentTimeMillis()/1000
         eventLog.archived = false
         appDatabase.eventLogDao().insertAll(eventLog)
-        scope.launch {
-            syncEventLogs()
-        }
+//        scope.launch {
+//            syncEventLogs()
+//        }
     }
 
     suspend fun syncEventLogs() {
@@ -53,7 +53,7 @@ class EventLogService  @Inject constructor(
                     log.archived = true
                     api.postEventLog(log)
                     appDatabase.eventLogDao().update(log)
-                    Log.d("syncLocks:", "Archive: " + log.id + ":" + log.event)
+                    Log.d("EventLogService:", "Archive: " + log.id + ":" + log.event)
                 }
             } catch (e: HttpException) {
                 val response = e.response()

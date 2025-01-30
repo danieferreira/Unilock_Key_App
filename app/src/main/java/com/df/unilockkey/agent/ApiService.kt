@@ -14,6 +14,7 @@ import okhttp3.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
+import retrofit2.http.PUT
 import retrofit2.http.Path
 
 interface ApiService {
@@ -44,8 +45,8 @@ interface ApiService {
     @GET("/api/lock/{lockNumber}")
     suspend fun getLock(@Path("lockNumber") lockNumber: Int): retrofit2.Response<Unilock>
 
-    @POST("/api/lock")
-    suspend fun postLock(@Body lock: Unilock)
+    @PUT("/api/lock/{lockNumber}")
+    suspend fun putLock(@Path("lockNumber") lockNumber: Int, @Body lock: Unilock)
 }
 
 data class LoginRequest(

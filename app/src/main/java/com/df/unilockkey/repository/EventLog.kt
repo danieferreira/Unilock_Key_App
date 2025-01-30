@@ -11,6 +11,7 @@ data class EventLog(
     var timestamp: Long = 0,
     var keyNumber: Int = 0,
     var lockNumber: Int = 0,
+    var status: Int = 0,
     var event: String = "",
     var archived: Boolean = false,
     var battery: String= "",

@@ -24,10 +24,13 @@ class RoomConverters {
     }
     @TypeConverter
     fun toUnikey(value: String?): Unikey? {
-        return  Gson().fromJson(
-            value,
-            object : TypeToken<Unikey?>() {}.type
-        )
+        return if (value == null)
+            null
+        else
+            Gson().fromJson(
+                value,
+                object : TypeToken<Unikey?>() {}.type
+            )
     }
 
     @TypeConverter
@@ -35,11 +38,15 @@ class RoomConverters {
         return Gson().toJson(listOfString)
     }
     @TypeConverter
-    fun toUnikeyList(list: String?): ArrayList<Unikey> {
-        return Gson().fromJson(
-            list,
-            object : TypeToken<ArrayList<Unikey?>?>() {}.type
-        )
+    fun toUnikeyList(list: String?): ArrayList<Unikey>? {
+        return if (list == null) {
+            null
+        } else {
+            Gson().fromJson(
+                list,
+                object : TypeToken<ArrayList<Unikey?>?>() {}.type
+            )
+        }
     }
 
     @TypeConverter
@@ -47,11 +54,15 @@ class RoomConverters {
         return Gson().toJson(value)
     }
     @TypeConverter
-    fun toUnilock(value: String?): Unilock {
-        return  Gson().fromJson(
-            value,
-            object : TypeToken<Unilock?>() {}.type
-        )
+    fun toUnilock(value: String?): Unilock? {
+        return if (value == null) {
+            null
+        } else {
+            Gson().fromJson(
+                value,
+                object : TypeToken<Unilock?>() {}.type
+            )
+        }
     }
 
     @TypeConverter
@@ -59,11 +70,15 @@ class RoomConverters {
         return Gson().toJson(listOfString)
     }
     @TypeConverter
-    fun toUnilockList(list: String?): ArrayList<Unilock> {
-        return Gson().fromJson(
-            list,
-            object : TypeToken<ArrayList<Unilock?>?>() {}.type
-        )
+    fun toUnilockList(list: String?): ArrayList<Unilock>? {
+        return if (list == null) {
+            null
+        } else {
+            Gson().fromJson(
+                list,
+                object : TypeToken<ArrayList<Unilock?>?>() {}.type
+            )
+        }
     }
 
     @TypeConverter
@@ -71,11 +86,15 @@ class RoomConverters {
         return Gson().toJson(value)
     }
     @TypeConverter
-    fun toEventLog(value: String?): EventLog {
-        return  Gson().fromJson(
-            value,
-            object : TypeToken<EventLog?>() {}.type
-        )
+    fun toEventLog(value: String?): EventLog? {
+        return if(value == null) {
+            null
+        } else {
+            Gson().fromJson(
+                value,
+                object : TypeToken<EventLog?>() {}.type
+            )
+        }
     }
 
     @TypeConverter
@@ -83,11 +102,15 @@ class RoomConverters {
         return Gson().toJson(value)
     }
     @TypeConverter
-    fun toBranch(value: String?): Branch {
-        return  Gson().fromJson(
-            value,
-            object : TypeToken<Branch?>() {}.type
-        )
+    fun toBranch(value: String?): Branch? {
+        return  if (value == null) {
+            null
+        } else {
+            Gson().fromJson(
+                value,
+                object : TypeToken<Branch?>() {}.type
+            )
+        }
     }
 
     @TypeConverter
@@ -95,11 +118,15 @@ class RoomConverters {
         return Gson().toJson(value)
     }
     @TypeConverter
-    fun toRoute(value: String?): Route {
-        return  Gson().fromJson(
-            value,
-            object : TypeToken<Route?>() {}.type
-        )
+    fun toRoute(value: String?): Route? {
+        return if (value == null) {
+            null
+        } else {
+            Gson().fromJson(
+                value,
+                object : TypeToken<Route?>() {}.type
+            )
+        }
     }
 
     @TypeConverter
@@ -107,11 +134,15 @@ class RoomConverters {
         return Gson().toJson(value)
     }
     @TypeConverter
-    fun toPhone(value: String?): Phone {
-        return  Gson().fromJson(
-            value,
-            object : TypeToken<Phone?>() {}.type
-        )
+    fun toPhone(value: String?): Phone? {
+        return if(value == null) {
+            null
+        } else {
+            Gson().fromJson(
+                value,
+                object : TypeToken<Phone?>() {}.type
+            )
+        }
     }
 
     @TypeConverter
@@ -119,11 +150,15 @@ class RoomConverters {
         return Gson().toJson(value)
     }
     @TypeConverter
-    fun toDateTime(value: String?): DateTime {
-        return  Gson().fromJson(
-            value,
-            object : TypeToken<DateTime?>() {}.type
-        )
+    fun toDateTime(value: String?): DateTime? {
+        return if(value==null) {
+            null
+        } else {
+            Gson().fromJson(
+                value,
+                object : TypeToken<DateTime?>() {}.type
+            )
+        }
     }
 
     @TypeConverter
@@ -131,11 +166,15 @@ class RoomConverters {
         return Gson().toJson(value)
     }
     @TypeConverter
-    fun toUnilockUser(value: String?): UnilockUser {
-        return  Gson().fromJson(
-            value,
-            object : TypeToken<UnilockUser?>() {}.type
-        )
+    fun toUnilockUser(value: String?): UnilockUser? {
+        return if(value == null) {
+            null
+        } else {
+            Gson().fromJson(
+                value,
+                object : TypeToken<UnilockUser?>() {}.type
+            )
+        }
     }
 
     @TypeConverter
@@ -143,11 +182,15 @@ class RoomConverters {
         return Gson().toJson(listOfString)
     }
     @TypeConverter
-    fun toRouteList(list: String?): ArrayList<Route> {
-        return Gson().fromJson(
-            list,
-            object : TypeToken<ArrayList<Route?>?>() {}.type
-        )
+    fun toRouteList(list: String?): ArrayList<Route>? {
+        return if (list == null) {
+            null
+        } else {
+            Gson().fromJson(
+                list,
+                object : TypeToken<ArrayList<Route?>?>() {}.type
+            )
+        }
     }
 
     @TypeConverter
@@ -155,10 +198,14 @@ class RoomConverters {
         return Gson().toJson(listOfString)
     }
     @TypeConverter
-    fun toPhoneList(list: String?): ArrayList<Phone> {
-        return Gson().fromJson(
-            list,
-            object : TypeToken<ArrayList<Phone?>?>() {}.type
-        )
+    fun toPhoneList(list: String?): ArrayList<Phone>? {
+        return if(list == null) {
+            null
+        } else {
+            Gson().fromJson(
+                list,
+                object : TypeToken<ArrayList<Phone?>?>() {}.type
+            )
+        }
     }
 }

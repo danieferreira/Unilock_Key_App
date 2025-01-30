@@ -153,9 +153,10 @@ object AppModule {
         phoneService: PhoneService,
         appDatabase: AppDatabase,
         eventLogService: EventLogService,
-        api: ApiService
+        api: ApiService,
+        @ApplicationContext context: Context
     ): DatabaseSyncService {
-        return DatabaseSyncService(auth, keyService, lockService, routeService, phoneService, appDatabase, eventLogService, api)
+        return DatabaseSyncService(auth, keyService, lockService, routeService, phoneService, appDatabase, eventLogService, api, context)
     }
 
     @Provides
