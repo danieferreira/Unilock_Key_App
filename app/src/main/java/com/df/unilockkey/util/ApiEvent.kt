@@ -8,5 +8,6 @@ sealed class  ApiEvent <out T:Any> {
     data class Phone<out T:Any> (val data: T? = null):ApiEvent<T>()
     data class Route<out T:Any> (val data: T? = null):ApiEvent<T>()
     data class Lock<out T:Any> (val data: T? = null):ApiEvent<T>()
+    data class Settings<out T:Any> (val data: T):ApiEvent<T>()
     data class Error(val message: String) : ApiEvent<String>()
 }

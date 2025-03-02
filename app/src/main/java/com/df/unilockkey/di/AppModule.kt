@@ -11,6 +11,7 @@ import com.df.unilockkey.agent.KeyService
 import com.df.unilockkey.agent.LockService
 import com.df.unilockkey.agent.PhoneService
 import com.df.unilockkey.agent.RouteService
+import com.df.unilockkey.agent.SettingsApiService
 import com.df.unilockkey.agent.TokenManager
 import com.df.unilockkey.data.KeyReceiverManager
 import com.df.unilockkey.data.ble.KeyBLEReceiverManager
@@ -18,6 +19,7 @@ import com.df.unilockkey.repository.AppDatabase
 import com.df.unilockkey.repository.DataRepository
 import com.df.unilockkey.service.DatabaseSyncService
 import com.df.unilockkey.service.EventLogService
+import com.df.unilockkey.service.SettingsService
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -45,9 +47,10 @@ object AppModule {
     fun provideKeyReceiverManager(
         @ApplicationContext context: Context,
         bluetoothAdapter: BluetoothAdapter,
-        dataRepository: DataRepository
+        dataRepository: DataRepository,
+        settingsService: SettingsService
     ): KeyReceiverManager {
-        return KeyBLEReceiverManager(bluetoothAdapter, context, dataRepository)
+        return KeyBLEReceiverManager(bluetoothAdapter, context, dataRepository, settingsService)
     }
 
     @Provides
@@ -56,6 +59,14 @@ object AppModule {
         @ApplicationContext context: Context
     ): DataRepository {
         return DataRepository(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideSettingsService(
+        appDatabase: AppDatabase
+    ): SettingsService {
+        return SettingsService(appDatabase)
     }
 
     @Provides
@@ -145,6 +156,14 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun providesSettingsService(
+        api: ApiService,
+    ): SettingsApiService {
+        return SettingsApiService(api)
+    }
+
+    @Provides
+    @Singleton
     fun providesDatabaseSyncService(
         auth: Authenticate,
         keyService: KeyService,
@@ -153,10 +172,11 @@ object AppModule {
         phoneService: PhoneService,
         appDatabase: AppDatabase,
         eventLogService: EventLogService,
+        settingsService: SettingsApiService,
         api: ApiService,
         @ApplicationContext context: Context
     ): DatabaseSyncService {
-        return DatabaseSyncService(auth, keyService, lockService, routeService, phoneService, appDatabase, eventLogService, api, context)
+        return DatabaseSyncService(auth, keyService, lockService, routeService, phoneService, appDatabase, eventLogService, settingsService, api, context)
     }
 
     @Provides

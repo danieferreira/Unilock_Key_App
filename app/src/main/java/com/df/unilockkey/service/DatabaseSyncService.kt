@@ -9,6 +9,7 @@ import com.df.unilockkey.agent.LockService
 import com.df.unilockkey.agent.LoginRequest
 import com.df.unilockkey.agent.PhoneService
 import com.df.unilockkey.agent.RouteService
+import com.df.unilockkey.agent.SettingsApiService
 import com.df.unilockkey.repository.AppDatabase
 import com.df.unilockkey.repository.EventLog
 import com.df.unilockkey.util.ApiEvent
@@ -18,6 +19,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
+import java.net.UnknownHostException
 import java.util.Timer
 import javax.inject.Inject
 import kotlin.concurrent.timerTask
@@ -31,14 +33,16 @@ class DatabaseSyncService @Inject constructor(
     private val phoneService: PhoneService,
     private val appDatabase: AppDatabase,
     private val logEventService: EventLogService,
+    private val settingsService: SettingsApiService,
     private var api: ApiService,
     @ApplicationContext private val context: Context
 ) {
 
     private val scope = CoroutineScope(Job() + Dispatchers.Main)
 
-    private var lockBusy = false;
-    var LoggedIn: Boolean = false;
+    private var lockBusy = false
+    private var syncSettingBusy = false
+    var LoggedIn: Boolean = false
     var phoneId: String? = null
 
     fun startSync(thisPhoneId: String?) {
@@ -50,7 +54,7 @@ class DatabaseSyncService @Inject constructor(
         funtimer.schedule(
             timerTask()
             {
-                getPhone(phoneId)
+                syncEventLogs()
             }, 30000, 30000)
     }
 
@@ -59,7 +63,8 @@ class DatabaseSyncService @Inject constructor(
         subscribeToRouteService()
         subscribeToKeyService()
         subscribeToLockService()
-        getPhone(phoneId)
+        subscribeToSettingsService()
+        syncEventLogs()
     }
 
     private fun getPhone(phoneId: String?) {
@@ -77,8 +82,11 @@ class DatabaseSyncService @Inject constructor(
     private fun syncEventLogs() {
         scope.launch {
             try {
+                Log.d("DatabaseSyncService", "Synchronise Database")
                 syncLocks()
+                syncSettings();
                 logEventService.syncEventLogs()
+                getPhone(phoneId)
             } catch (err: Exception) {
                 Log.d("DatabaseSyncService", err.message.toString())
             }
@@ -112,7 +120,7 @@ class DatabaseSyncService @Inject constructor(
                 when(result) {
                     is ApiEvent.LoggedIn -> {
                         LoggedIn = true;
-                        getPhone(phoneId)
+                        syncEventLogs()
                     }
                     else -> {}
                 }
@@ -133,6 +141,7 @@ class DatabaseSyncService @Inject constructor(
                                 } else {
                                     appDatabase.unikeyDao().update(key)
                                 }
+                                settingsService.getSettingsByKey(key.keyNumber)
                             }
                         } catch (err: Exception) {
                             Log.d("DatabaseSyncService", err.message.toString())
@@ -162,7 +171,6 @@ class DatabaseSyncService @Inject constructor(
                         } catch (err: Exception) {
                             Log.d("DatabaseSyncService", err.message.toString())
                         }
-                        syncEventLogs()
                     }
                     else -> {}
                 }
@@ -184,7 +192,6 @@ class DatabaseSyncService @Inject constructor(
                         } catch (err: Exception) {
                                 Log.d("DatabaseSyncService", err.message.toString())
                         }
-                        syncEventLogs()
                     }
                     else -> {}
                 }
@@ -209,6 +216,7 @@ class DatabaseSyncService @Inject constructor(
                                 if (route.locks != null) {
                                     for (lock in route.locks) {
                                         lockService.getLock(lock.lockNumber)
+                                        settingsService.getSettingsByLock(lock.lockNumber)
                                     }
                                 }
                             }
@@ -275,6 +283,53 @@ class DatabaseSyncService @Inject constructor(
         }
     }
 
+    private fun subscribeToSettingsService() {
+        scope.launch {
+            settingsService.setting.collect { result ->
+                when (result) {
+                    is ApiEvent.Settings -> {
+                        try {
+                            if (result.data != null) {
+                                val setting = result.data
+                                val tmpSetting = appDatabase.settingsDao().findById(setting.id)
+                                if (tmpSetting == null) {
+                                    appDatabase.settingsDao().insert(setting)
+                                } else {
+                                    appDatabase.settingsDao().update(setting)
+                                }
+                            }
+                        } catch (err: Exception) {
+                            Log.d("DatabaseSyncService", err.message.toString())
+                        }
+                    }
+                    else -> {}
+                }
+            }
+        }
+
+        scope.launch {
+            settingsService.settings.collect { result ->
+                when (result) {
+                    is ApiEvent.Settings -> {
+                        try {
+                            for (setting in result.data) {
+                                val tmpSetting = appDatabase.settingsDao().findById(setting.id)
+                                if (tmpSetting == null) {
+                                    appDatabase.settingsDao().insert(setting)
+                                } else {
+                                    appDatabase.settingsDao().update(setting)
+                                }
+                            }
+                        } catch (err: Exception) {
+                            Log.d("DatabaseSyncService", err.message.toString())
+                        }
+                    }
+                    else -> {}
+                }
+            }
+        }
+    }
+
     suspend fun syncLocks() {
         if (!lockBusy) {
             try {
@@ -302,6 +357,38 @@ class DatabaseSyncService @Inject constructor(
             }
         }
     }
+
+    suspend fun syncSettings() {
+        if (!syncSettingBusy) {
+            try {
+                syncSettingBusy = true
+                val settings = appDatabase.settingsDao().getAllByArchive(false)
+                for (setting in settings) {
+                    setting.archived = true
+                    api.putSettings(setting.id, setting)
+                    appDatabase.settingsDao().update(setting)
+                    Log.d("syncSettings:", "Archive: Setting")
+                }
+            } catch (e: HttpException) {
+                val response = e.response()
+                val errorCode = e.code()
+                if (response != null) {
+                    Log.d("syncSettings:", response.message() + ":" + errorCode.toString())
+                } else {
+                    Log.d("syncSettings:", errorCode.toString())
+                }
+                scope.launch { auth.refreshLogin()}
+            } catch (e: UnknownHostException) {
+                Log.d("syncSettings:", e.message.toString())
+            } catch (e: Exception) {
+                Log.d("syncSettings:", e.message.toString())
+            } finally {
+                syncSettingBusy = false;
+            }
+        }
+    }
+
+
 
     private suspend fun createEvent(msg: String) {
         val eventLog = EventLog()

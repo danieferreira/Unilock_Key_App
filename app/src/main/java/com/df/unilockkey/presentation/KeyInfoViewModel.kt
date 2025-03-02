@@ -17,6 +17,7 @@ import com.df.unilockkey.repository.Unikey
 import com.df.unilockkey.repository.Unilock
 import com.df.unilockkey.service.DatabaseSyncService
 import com.df.unilockkey.service.EventLogService
+import com.df.unilockkey.service.SettingsService
 import com.df.unilockkey.util.ApiEvent
 import com.df.unilockkey.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -34,6 +35,7 @@ class KeyInfoViewModel @Inject constructor(
     private val eventLogService: EventLogService,
     private val phoneService: PhoneService,
     private val syncDatabase: DatabaseSyncService,
+    private val settingsService: SettingsService
 ): ViewModel() {
 
     var initialisingMessage by mutableStateOf<String?>(null)
@@ -182,6 +184,18 @@ class KeyInfoViewModel @Inject constructor(
         return false
     }
 
+    private fun CheckKeySettings(keyNumber: Long) {
+        //Check if there are new settings for this key
+        viewModelScope.launch {
+            val setting = settingsService.findNewSetting(keyNumber)
+            if (setting != null) {
+                Log.d("BLEReceiverManager", keyNumber.toString() + ": Sending Settings")
+                keyReceiverManager.sendSettings(setting)
+            }
+        }
+    }
+
+
     private fun subscribeToChanged() {
         viewModelScope.launch {
             keyReceiverManager.data.collect{ result ->
@@ -202,45 +216,49 @@ class KeyInfoViewModel @Inject constructor(
                             val sdf: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
                             val date = LocalDateTime.now()
 
-                            if (result.data.lockId != "") {
-                                lockId = result.data.lockId
-                                setKeyEnabled(false)
-                                try {
-                                    val key = appDatabase.unikeyDao().findByKeyNumber(keyId.toInt())
-                                    if (key == null) {
-                                        keyValid = "Key not found"
-                                        event = "Key not found"
-                                    } else {
-                                        if (!key.enabled) {
-                                            keyValid = "Key Blocked"
-                                            event = "Key Blocked, Key not Enabled"
+                            if (result.data.lockId == "") {
+                                CheckKeySettings(keyId.toLong())
+                            } else {
+                                if (lockId != result.data.lockId) {
+                                    lockId = result.data.lockId
+                                    setKeyEnabled(false)
+                                    try {
+                                        val key = appDatabase.unikeyDao().findByKeyNumber(keyId.toInt())
+                                        if (key == null) {
+                                            keyValid = "Key not found"
+                                            event = "Key not found"
                                         } else {
-                                            //Check the start and end times if requires
-                                            var keyLimited = false
-
-                                            if (checkKeyLimited(key)) {
-                                                keyValid = "Key Time Limited"
+                                            if (!key.enabled) {
+                                                keyValid = "Key Blocked"
+                                                event = "Key Blocked, Key not Enabled"
                                             } else {
-                                                if (checkForcedConnection()) {
-                                                    keyValid = "No Connection"
-                                                    event = "No Connection after $lockCount locks accessed"
+                                                //Check the start and end times if requires
+                                                var keyLimited = false
+
+                                                if (checkKeyLimited(key)) {
+                                                    keyValid = "Key Time Limited"
                                                 } else {
-                                                    val lock = appDatabase.unilockDao().findByLockNumber(lockId.toInt())
-                                                    if (lock == null) {
-                                                        keyValid = "Lock not found"
-                                                        event = "Lock not found"
+                                                    if (checkForcedConnection()) {
+                                                        keyValid = "No Connection"
+                                                        event = "No Connection after $lockCount locks accessed"
                                                     } else {
-                                                        if (!checkLockDate(lock)) {
-                                                            keyValid = "Lock Expired"
+                                                        val lock = appDatabase.unilockDao().findByLockNumber(lockId.toInt())
+                                                        if (lock == null) {
+                                                            keyValid = "Lock not found"
+                                                            event = "Lock not found"
                                                         } else {
-                                                            //Check the route
-                                                            if (!checkValidRoute(lock)) {
-                                                                keyValid = "Route Invalid"
+                                                            if (!checkLockDate(lock)) {
+                                                                keyValid = "Lock Expired"
                                                             } else {
-                                                                if (checkKeyExpired(lock, key)) {
-                                                                    keyValid = "Key Expired"
+                                                                //Check the route
+                                                                if (!checkValidRoute(lock)) {
+                                                                    keyValid = "Route Invalid"
                                                                 } else {
-                                                                    setKeyEnabled(true)
+                                                                    if (checkKeyExpired(lock, key)) {
+                                                                        keyValid = "Key Expired"
+                                                                    } else {
+                                                                        setKeyEnabled(true)
+                                                                    }
                                                                 }
                                                             }
                                                         }
@@ -248,44 +266,31 @@ class KeyInfoViewModel @Inject constructor(
                                                 }
                                             }
                                         }
-                                        //Log this event
-                                        if ((!eventLog.event.equals(event)) ||
-                                            (eventLog.lockNumber != lockId.toInt()) ||
-                                            eventLog.keyNumber != keyId.toInt() ||
-                                            eventLog.status != keyStatus
-                                        ) {
-                                            eventLog.phoneId = currentPhone!!.id
-                                            eventLog.event = event
-                                            eventLog.keyNumber = keyId.toInt()
-                                            eventLog.lockNumber = lockId.toInt()
-                                            eventLog.status = keyStatus
-                                            eventLog.battery = battVoltage.replace(',', '.')
-                                            Log.d("KeyInfoViewModel", "$event - Status: $keyStatus")
-                                            eventLogService.logEvent(eventLog)
-                                        }
-                                        viewModelScope.launch {
-                                            eventLogService.syncEventLogs()
-                                            syncDatabase.syncLocks()
-                                        }
+                                    } catch (err: Exception) {
+                                        Log.d("KeyInfoViewModel", err.message.toString())
                                     }
-                                } catch (err: Exception) {
-                                    Log.d("KeyInfoViewModel", err.message.toString())
                                 }
-                            } else {
-                                if (eventLog.keyNumber != keyId.toInt()) {
-                                    //Key without a lock
-                                    event = "Connected"
+                                //Log this event
+                                if ((!eventLog.event.equals(event)) ||
+                                    (eventLog.lockNumber != lockId.toInt()) ||
+                                    eventLog.keyNumber != keyId.toInt() ||
+                                    eventLog.status != keyStatus
+                                ) {
                                     eventLog.phoneId = currentPhone!!.id
                                     eventLog.event = event
                                     eventLog.keyNumber = keyId.toInt()
-                                    eventLog.lockNumber = 0
-                                    eventLog.status = 0
+                                    eventLog.lockNumber = lockId.toInt()
+                                    eventLog.status = keyStatus
                                     eventLog.battery = battVoltage.replace(',', '.')
-
+                                    Log.d("KeyInfoViewModel", "$event - Status: $keyStatus")
                                     eventLogService.logEvent(eventLog)
                                 }
-                            }
+                                viewModelScope.launch {
+                                    eventLogService.syncEventLogs()
+                                    syncDatabase.syncLocks()
+                                }
 
+                            }
                         } catch (err: Exception) {
                             Log.d("KeyInfoViewModel", err.message.toString())
                             //                            eventLog.event = err.message.toString()

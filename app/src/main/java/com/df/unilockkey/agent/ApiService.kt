@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import com.df.unilockkey.repository.EventLog
 import com.df.unilockkey.repository.Phone
 import com.df.unilockkey.repository.Route
+import com.df.unilockkey.repository.Settings
 import com.df.unilockkey.repository.Unikey
 import com.df.unilockkey.repository.Unilock
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -36,17 +37,32 @@ interface ApiService {
     @GET("/api/route")
     suspend fun getRoutes(): retrofit2.Response<Array<Route>>
 
+    @GET("/api/settings?search=false")
+    suspend fun getSettings(): retrofit2.Response<Array<Settings>>
+
+    @GET("/api/settings/lock/{lockNumber}?search=false")
+    suspend fun getSettingsByLock(@Path("lockNumber") lockNumber: Int): retrofit2.Response<Array<Settings>>
+
+    @GET("/api/settings/key/{keyNumber}?search=false")
+    suspend fun getSettingsByKey(@Path("keyNumber") keyNumber: Int): retrofit2.Response<Array<Settings>>
+
     @GET("/api/phone/{phoneId}")
     suspend fun getPhone(@Path("phoneId") phoneId: String): retrofit2.Response<Phone>
 
     @GET("/api/route/{id}")
     suspend fun getRoute(@Path("id") id: Int): retrofit2.Response<Route>
 
+    @GET("/api/settings/{id}")
+    suspend fun getSetting(@Path("id") id: Int): retrofit2.Response<Settings>
+
     @GET("/api/lock/{lockNumber}")
     suspend fun getLock(@Path("lockNumber") lockNumber: Int): retrofit2.Response<Unilock>
 
     @PUT("/api/lock/{lockNumber}")
     suspend fun putLock(@Path("lockNumber") lockNumber: Int, @Body lock: Unilock)
+
+    @PUT("/api/settings/{id}")
+    suspend fun putSettings(@Path("id") id: Int, @Body setting: Settings)
 }
 
 data class LoginRequest(

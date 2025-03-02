@@ -8,7 +8,16 @@ import androidx.room.TypeConverters
 import kotlin.concurrent.Volatile
 
 
-@Database(entities = [Unikey::class, Unilock::class, EventLog::class, Branch::class, Route::class, Phone::class, UnilockUser::class], version = 19)
+@Database(entities = [
+    Unikey::class,
+    Unilock::class,
+    EventLog::class,
+    Branch::class,
+    Route::class,
+    Phone::class,
+    UnilockUser::class,
+    Settings::class
+ ], version = 22)
 @TypeConverters(RoomConverters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun unilockDao(): UnilockDao
@@ -18,6 +27,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun routeDao(): RouteDao
     abstract fun phoneDao(): PhoneDao
     abstract fun unilockUserDao(): UnilockUserDao
+    abstract fun settingsDao(): SettingsDao
 
     companion object {
         @Volatile

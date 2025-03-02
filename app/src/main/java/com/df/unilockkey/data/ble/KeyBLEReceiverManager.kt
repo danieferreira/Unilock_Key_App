@@ -17,6 +17,8 @@ import com.df.unilockkey.data.ConnectionState
 import com.df.unilockkey.data.KeyInfoResult
 import com.df.unilockkey.data.KeyReceiverManager
 import com.df.unilockkey.repository.DataRepository
+import com.df.unilockkey.repository.Settings
+import com.df.unilockkey.service.SettingsService
 import com.df.unilockkey.util.Resource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -31,13 +33,14 @@ import javax.inject.Inject
 class KeyBLEReceiverManager @Inject constructor(
     private val bluetoothAdapter: BluetoothAdapter,
     private val context: Context,
-    private val dataRepository: DataRepository
+    private val dataRepository: DataRepository,
+    private val settingsService: SettingsService
 ): KeyReceiverManager {
     private val SERVICE_UUID = "000000ff-0000-1000-8000-00805f9b34fb"
     private val CHAR1_UUID = "0000ff01-0000-1000-8000-00805f9b34fb"
     private val CHAR2_UUID = "0000ff02-0000-1000-8000-00805f9b34fb"
     private val CHAR3_UUID = "0000ff03-0000-1000-8000-00805f9b34fb"
-
+    private val CHAR4_UUID = "0000ff04-0000-1000-8000-00805f9b34fb"
 
     override val data: MutableSharedFlow<Resource<KeyInfoResult>> = MutableSharedFlow()
 
@@ -163,12 +166,12 @@ class KeyBLEReceiverManager @Inject constructor(
                     UUID.fromString(CHAR1_UUID) -> {
                         var lockIdStr: String = String(value, Charsets.UTF_8)
                         var statusStr: String = "0000"
-                        Log.d("KeyBLEReceiverManager", "Message: $lockIdStr")
+                        //Log.d("KeyBLEReceiverManager", "Message: $lockIdStr")
                         val tmpIndex = value.indexOf(':'.code.toByte())
                         if (tmpIndex != -1) {
                             statusStr = lockIdStr.substring(tmpIndex + 1)
                             lockIdStr= lockIdStr.substring(0, tmpIndex)
-                            Log.d("KeyBLEReceiverManager", "Status: $statusStr")
+                            //Log.d("KeyBLEReceiverManager", "Status: $statusStr")
                         }
 
                         coroutineScope.launch {
@@ -187,7 +190,7 @@ class KeyBLEReceiverManager @Inject constructor(
                             )
                         }
                         //Enable the Key to open Lock
-                        setKeyEnabled(gatt)
+                        sendKeyEnabled(gatt)
                     }
                     else -> {
                         Log.d("BLEReceiverManager", uuid.toString())
@@ -214,6 +217,8 @@ class KeyBLEReceiverManager @Inject constructor(
             status: Int
         ) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
+                enableNotification()
+
                 if (characteristic.uuid == UUID.fromString(CHAR2_UUID)) {
                     //Key Number
                     val valueStr = String(value, Charsets.UTF_8)
@@ -236,7 +241,7 @@ class KeyBLEReceiverManager @Inject constructor(
                         version = valueStr.substring(21)
                     }
 
-                    coroutineScope.launch {
+                    val launch = coroutineScope.launch {
                         data.emit(
                             Resource.Success(
                                 data = KeyInfoResult(
@@ -252,6 +257,7 @@ class KeyBLEReceiverManager @Inject constructor(
                         )
                     }
                 }
+
                 if (characteristic.uuid == UUID.fromString(CHAR3_UUID)) {
                     //Key Date
                     coroutineScope.launch {
@@ -270,7 +276,6 @@ class KeyBLEReceiverManager @Inject constructor(
                         )
                     }
                 }
-                enableNotification()
             } else {
                 Log.d("BLEReceiverManager", "Bad Read")
                 coroutineScope.launch {
@@ -291,14 +296,23 @@ class KeyBLEReceiverManager @Inject constructor(
 //                        Resource.Loading(message = "Key Time set...")
 //                    )
 //                }
-                readKeyNumber(gatt)
+                if (characteristic.uuid == UUID.fromString(CHAR3_UUID)) {
+                    readKeyNumber(gatt)
+                }
+                if (characteristic.uuid == UUID.fromString(CHAR4_UUID)) {
+                    //Mark Setting as Configured
+                    settingsService.currentSetting.configured = true
+                    settingsService.currentSetting.implemented =System.currentTimeMillis()/1000
+                    settingsService.update(settingsService.currentSetting)
+                    Log.d("BLEReceiverManager", "Setting Configured")
+                }
             } else {
                 Log.d("BLEReceiverManager", "Write Date Failed!!")
             }
         }
     }
 
-    private fun setKeyEnabled(gatt: BluetoothGatt) {
+    private fun sendKeyEnabled(gatt: BluetoothGatt) {
         if (dataRepository.keyEnabled) {
 
             val char1Service = findCharacteristic(SERVICE_UUID, CHAR1_UUID)
@@ -316,6 +330,7 @@ class KeyBLEReceiverManager @Inject constructor(
                     char1Service.setValue(data)
                     gatt.writeCharacteristic(char1Service)
                 }
+                dataRepository.keyEnabled = false
             }
         }
     }
@@ -323,6 +338,7 @@ class KeyBLEReceiverManager @Inject constructor(
     private fun setKeyDate(gatt: BluetoothGatt) {
         val char3Service = findCharacteristic(SERVICE_UUID, CHAR3_UUID)
         if (char3Service != null) {
+            Log.d("BLEReceiverManager", "Set Key Date")
             val calendar = Calendar.getInstance()
             val data = ByteArray(6)
             data[0] = (calendar.get(Calendar.YEAR) - 2000).toByte()
@@ -457,5 +473,36 @@ class KeyBLEReceiverManager @Inject constructor(
             disconnectCharacteristic(characteristic)
         }
         gatt?.close()
+    }
+
+    override fun sendSettings(setting: Settings) {
+        val char4Service = findCharacteristic(SERVICE_UUID, CHAR4_UUID)
+        if (char4Service != null) {
+            Log.d("BLEReceiverManager", "Set Key Settings")
+            var data = setting.password1.toByteArray()
+            data += ','.code.toByte()
+            data += setting.password2.toByteArray()
+            data += ','.code.toByte()
+            data += setting.password3.toByteArray()
+            data += ','.code.toByte()
+            if (setting.oldPropgrammingPassword != null) {
+                data += setting.oldPropgrammingPassword.toByteArray()
+                data += ','.code.toByte()
+            }
+            if (setting.newPropgrammingPassword != null) {
+                data += setting.newPropgrammingPassword.toByteArray()
+            }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                gatt?.writeCharacteristic(
+                    char4Service,
+                    data,
+                    BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+                )
+            } else {
+                char4Service.setValue(data)
+                gatt?.writeCharacteristic(char4Service)
+            }
+        }
     }
 }
