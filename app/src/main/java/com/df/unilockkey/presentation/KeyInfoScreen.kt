@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -20,6 +22,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -53,6 +57,10 @@ fun KeyInfoScreen(
     val permissionState = rememberMultiplePermissionsState(permissions = PermissionUtils.permissions)
     val lifecycleOwner = LocalLifecycleOwner.current
     val bleConnectionState = viewModel.connectionState
+    val debugLogs by viewModel.debugLog.collectAsState()
+    val state = rememberScrollState()
+
+    LaunchedEffect(Unit) { state.animateScrollTo(0) }
 
     DisposableEffect(
         key1 = lifecycleOwner,
@@ -208,6 +216,26 @@ fun KeyInfoScreen(
                             style = MaterialTheme.typography.headlineMedium
                         )                    }
                 }
+            }
+        }
+
+        Text(
+            text = "Debug Log",
+            modifier = Modifier.padding(2.dp),
+            fontWeight = FontWeight.ExtraBold,
+        )
+
+        // lazy column for displaying listview.
+        LazyColumn (
+            modifier = Modifier
+                .padding(0.dp),
+        ) {
+            // populating items for listview.
+            items(debugLogs.size) { index ->
+                Text(
+                    text = debugLogs[index],
+                    modifier = Modifier.padding(0.dp)
+                )
             }
         }
     }

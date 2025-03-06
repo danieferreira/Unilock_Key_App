@@ -11,12 +11,15 @@ import com.df.unilockkey.agent.PhoneService
 import com.df.unilockkey.agent.RouteService
 import com.df.unilockkey.agent.SettingsApiService
 import com.df.unilockkey.repository.AppDatabase
+import com.df.unilockkey.repository.DebugLog
 import com.df.unilockkey.repository.EventLog
 import com.df.unilockkey.util.ApiEvent
+import com.df.unilockkey.util.Resource
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import java.net.UnknownHostException
@@ -37,6 +40,8 @@ class DatabaseSyncService @Inject constructor(
     private var api: ApiService,
     @ApplicationContext private val context: Context
 ) {
+
+    val debugLogs: MutableSharedFlow<Resource<DebugLog>> = MutableSharedFlow()
 
     private val scope = CoroutineScope(Job() + Dispatchers.Main)
 
@@ -74,7 +79,7 @@ class DatabaseSyncService @Inject constructor(
                     phoneService.getPhone(phoneId)
                 }
             } catch (err: Exception) {
-                Log.d("DatabaseSyncService", err.message.toString())
+                NewDebugLog("DatabaseSyncService", err.message.toString())
             }
         }
     }
@@ -82,13 +87,14 @@ class DatabaseSyncService @Inject constructor(
     private fun syncEventLogs() {
         scope.launch {
             try {
-                Log.d("DatabaseSyncService", "Synchronise Database")
+                NewDebugLog("DatabaseSyncService", "Synchronise Database")
                 syncLocks()
                 syncSettings();
                 logEventService.syncEventLogs()
                 getPhone(phoneId)
             } catch (err: Exception) {
-                Log.d("DatabaseSyncService", err.message.toString())
+                NewDebugLog("DatabaseSyncService", err.message.toString())
+
             }
         }
     }
@@ -98,7 +104,7 @@ class DatabaseSyncService @Inject constructor(
             try {
                 keyService.getKeys()
             } catch (err: Exception) {
-                Log.d("DatabaseSyncService", err.message.toString())
+                NewDebugLog("DatabaseSyncService", err.message.toString())
             }
         }
     }
@@ -109,7 +115,7 @@ class DatabaseSyncService @Inject constructor(
             try {
                 auth.login(LoginRequest(username, password))
             } catch (err: Exception) {
-                Log.d("DatabaseSyncService", err.message.toString())
+                NewDebugLog("DatabaseSyncService", err.message.toString())
             }
         }
     }
@@ -144,7 +150,7 @@ class DatabaseSyncService @Inject constructor(
                                 settingsService.getSettingsByKey(key.keyNumber)
                             }
                         } catch (err: Exception) {
-                            Log.d("DatabaseSyncService", err.message.toString())
+                            NewDebugLog("DatabaseSyncService", err.message.toString())
                         }
                     }
                     else -> {}
@@ -169,7 +175,7 @@ class DatabaseSyncService @Inject constructor(
                                 }
                             }
                         } catch (err: Exception) {
-                            Log.d("DatabaseSyncService", err.message.toString())
+                            NewDebugLog("DatabaseSyncService", err.message.toString())
                         }
                     }
                     else -> {}
@@ -190,7 +196,7 @@ class DatabaseSyncService @Inject constructor(
                                 }
                             }
                         } catch (err: Exception) {
-                                Log.d("DatabaseSyncService", err.message.toString())
+                                NewDebugLog("DatabaseSyncService", err.message.toString())
                         }
                     }
                     else -> {}
@@ -221,7 +227,7 @@ class DatabaseSyncService @Inject constructor(
                                 }
                             }
                         } catch (err: Exception) {
-                            Log.d("DatabaseSyncService", err.message.toString())
+                            NewDebugLog("DatabaseSyncService", err.message.toString())
                         }
                     }
                     else -> {}
@@ -243,7 +249,7 @@ class DatabaseSyncService @Inject constructor(
                                 }
                             }
                         } catch (err: Exception) {
-                            Log.d("DatabaseSyncService", err.message.toString())
+                            NewDebugLog("DatabaseSyncService", err.message.toString())
                         }
                     }
                     else -> {}
@@ -273,7 +279,7 @@ class DatabaseSyncService @Inject constructor(
                                 }
                             }
                         } catch (err: Exception) {
-                            Log.d("DatabaseSyncService", err.message.toString())
+                            NewDebugLog("DatabaseSyncService", err.message.toString())
                         }
                         getKeys();
                     }
@@ -299,7 +305,7 @@ class DatabaseSyncService @Inject constructor(
                                 }
                             }
                         } catch (err: Exception) {
-                            Log.d("DatabaseSyncService", err.message.toString())
+                            NewDebugLog("DatabaseSyncService", err.message.toString())
                         }
                     }
                     else -> {}
@@ -321,7 +327,7 @@ class DatabaseSyncService @Inject constructor(
                                 }
                             }
                         } catch (err: Exception) {
-                            Log.d("DatabaseSyncService", err.message.toString())
+                            NewDebugLog("DatabaseSyncService", err.message.toString())
                         }
                     }
                     else -> {}
@@ -339,18 +345,18 @@ class DatabaseSyncService @Inject constructor(
                     lock.archived = true
                     api.putLock(lock.lockNumber, lock)
                     appDatabase.unilockDao().update(lock)
-                    Log.d("syncLocks:", "Archive: " +  lock.lockNumber.toString())
+                    NewDebugLog("syncLocks:", "Archive: " +  lock.lockNumber.toString())
                 }
             } catch (e: HttpException) {
                 val response = e.response()
                 val errorCode = e.code()
                 if (response != null) {
-                    Log.d("syncLocks:", response.message() + ":" + errorCode.toString())
+                    NewDebugLog("syncLocks:", response.message() + ":" + errorCode.toString())
                 } else {
-                    Log.d("syncLocks:", "ErrorCode: $errorCode")
+                    NewDebugLog("syncLocks:", "ErrorCode: $errorCode")
                 }
             } catch (e: Exception) {
-                Log.d("syncLocks:", e.message.toString())
+                NewDebugLog("syncLocks:", e.message.toString())
                 createEvent("syncLocks: " + e.message.toString())
             } finally {
                 lockBusy = false
@@ -367,28 +373,41 @@ class DatabaseSyncService @Inject constructor(
                     setting.archived = true
                     api.putSettings(setting.id, setting)
                     appDatabase.settingsDao().update(setting)
-                    Log.d("syncSettings:", "Archive: Setting")
+                    NewDebugLog("syncSettings:", "Archive: Setting")
                 }
             } catch (e: HttpException) {
                 val response = e.response()
                 val errorCode = e.code()
                 if (response != null) {
-                    Log.d("syncSettings:", response.message() + ":" + errorCode.toString())
+                    NewDebugLog("syncSettings:", response.message() + ":" + errorCode.toString())
                 } else {
-                    Log.d("syncSettings:", errorCode.toString())
+                    NewDebugLog("syncSettings:", errorCode.toString())
                 }
                 scope.launch { auth.refreshLogin()}
             } catch (e: UnknownHostException) {
-                Log.d("syncSettings:", e.message.toString())
+                NewDebugLog("syncSettings:", e.message.toString())
             } catch (e: Exception) {
-                Log.d("syncSettings:", e.message.toString())
+                NewDebugLog("syncSettings:", e.message.toString())
             } finally {
                 syncSettingBusy = false;
             }
         }
     }
 
-
+    private fun NewDebugLog(tag: String, message: String) {
+        Log.d(tag, message)
+        scope.launch {
+            debugLogs.emit(
+                Resource.Success(
+                    data = DebugLog(
+                        phoneId = phoneId,
+                        timestamp = System.currentTimeMillis() / 1000,
+                        event = message
+                    )
+                )
+            )
+        }
+    }
 
     private suspend fun createEvent(msg: String) {
         val eventLog = EventLog()
@@ -397,7 +416,7 @@ class DatabaseSyncService @Inject constructor(
         eventLog.keyNumber = 0
         eventLog.lockNumber = 0
         eventLog.battery = "0.0"
-
         logEventService.logEvent(eventLog)
     }
+
 }

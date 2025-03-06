@@ -1,8 +1,10 @@
 package com.df.unilockkey.agent
 
 import android.util.Log
+import com.df.unilockkey.repository.DebugLog
 import com.df.unilockkey.repository.Settings
 import com.df.unilockkey.util.ApiEvent
+import com.df.unilockkey.util.Resource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -14,6 +16,7 @@ class SettingsApiService(private var api: ApiService) {
     private val coroutineScope= CoroutineScope(Dispatchers.Default)
     val settings: MutableSharedFlow<ApiEvent<Array<Settings>>> = MutableSharedFlow()
     val setting: MutableSharedFlow<ApiEvent<Settings>> = MutableSharedFlow()
+    val debugLogs: MutableSharedFlow<Resource<DebugLog>> = MutableSharedFlow()
 
     private var busy: Boolean = false
 
@@ -26,9 +29,9 @@ class SettingsApiService(private var api: ApiService) {
                     val body = response.body()
                     for (setting in body!!) {
                         if (setting.lock != null) {
-                            Log.d("Settings:", "Settings for " + setting.lock.lockNumber)
+                            NewDebugLog("Settings:", "Settings for " + setting.lock.lockNumber)
                         } else if (setting.key != null) {
-                            Log.d("Settings:", "Settings for " + setting.key.keyNumber + ". " + setting.id)
+                            NewDebugLog("Settings:", "Settings for " + setting.key.keyNumber + ". " + setting.id)
                         }
                     }
                     coroutineScope.launch {
@@ -38,21 +41,21 @@ class SettingsApiService(private var api: ApiService) {
                     }
                 } else {
                     val code = response.code()
-                    Log.d("Settings:", code.toString())
+                    NewDebugLog("Settings:", code.toString())
                 }
             }
         } catch (e: HttpException) {
             val response = e.response()
             val errorCode = e.code()
             if (response != null) {
-                Log.d("Settings:", response.message() + ":" + errorCode.toString())
+                NewDebugLog("Settings:", response.message() + ":" + errorCode.toString())
             } else {
-                Log.d("Settings:", errorCode.toString())
+                NewDebugLog("Settings:", errorCode.toString())
             }
         } catch (e: UnknownHostException) {
-            Log.d("Settings:", e.message.toString())
+            NewDebugLog("Settings:", e.message.toString())
         } catch (e: Exception) {
-            Log.d("Settings:", e.message.toString())
+            NewDebugLog("Settings:", e.message.toString())
         } finally {
             busy = false;
         }
@@ -67,9 +70,9 @@ class SettingsApiService(private var api: ApiService) {
                     val body = response.body()
                     for (setting in body!!) {
                         if (setting.lock != null) {
-                            Log.d("Settings:", "Settings for Lock:" + setting.lock.lockNumber)
+                            NewDebugLog("Settings:", "Settings for Lock:" + setting.lock.lockNumber)
                         } else if (setting.key != null) {
-                            Log.d("Settings:", "Settings for Key:" + setting.key.keyNumber + ", " + setting.id)
+                            NewDebugLog("Settings:", "Settings for Key:" + setting.key.keyNumber + ", " + setting.id)
                         }
                     }
                     coroutineScope.launch {
@@ -79,21 +82,21 @@ class SettingsApiService(private var api: ApiService) {
                     }
                 } else {
                     val code = response.code()
-                    Log.d("Settings:", code.toString())
+                    NewDebugLog("Settings:", code.toString())
                 }
             }
         } catch (e: HttpException) {
             val response = e.response()
             val errorCode = e.code()
             if (response != null) {
-                Log.d("Settings:", response.message() + ":" + errorCode.toString())
+                NewDebugLog("Settings:", response.message() + ":" + errorCode.toString())
             } else {
-                Log.d("Settings:", errorCode.toString())
+                NewDebugLog("Settings:", errorCode.toString())
             }
         } catch (e: UnknownHostException) {
-            Log.d("Settings:", e.message.toString())
+            NewDebugLog("Settings:", e.message.toString())
         } catch (e: Exception) {
-            Log.d("Settings:", e.message.toString())
+            NewDebugLog("Settings:", e.message.toString())
         } finally {
             busy = false;
         }
@@ -108,9 +111,9 @@ class SettingsApiService(private var api: ApiService) {
                     val body = response.body()
                     for (setting in body!!) {
                         if (setting.lock != null) {
-                            Log.d("Settings:", "Settings for Lock:" + setting.lock.lockNumber)
+                            NewDebugLog("Settings:", "Settings for Lock:" + setting.lock.lockNumber)
                         } else if (setting.key != null) {
-                            Log.d("Settings:", "Settings for Key:" + setting.key.keyNumber + ", " + setting.id
+                            NewDebugLog("Settings:", "Settings for Key:" + setting.key.keyNumber + ", " + setting.id
                             )
                         }
                     }
@@ -121,21 +124,21 @@ class SettingsApiService(private var api: ApiService) {
                     }
                 } else {
                     val code = response.code()
-                    Log.d("Settings:", code.toString())
+                    NewDebugLog("Settings:", code.toString())
                 }
             }
         } catch (e: HttpException) {
             val response = e.response()
             val errorCode = e.code()
             if (response != null) {
-                Log.d("Settings:", response.message() + ":" + errorCode.toString())
+                NewDebugLog("Settings:", response.message() + ":" + errorCode.toString())
             } else {
-                Log.d("Settings:", errorCode.toString())
+                NewDebugLog("Settings:", errorCode.toString())
             }
         } catch (e: UnknownHostException) {
-            Log.d("Settings:", e.message.toString())
+            NewDebugLog("Settings:", e.message.toString())
         } catch (e: Exception) {
-            Log.d("Settings:", e.message.toString())
+            NewDebugLog("Settings:", e.message.toString())
         } finally {
             busy = false;
         }
@@ -149,7 +152,7 @@ class SettingsApiService(private var api: ApiService) {
                 if (response.isSuccessful) {
                     val thisSetting = response.body()
                     if (thisSetting != null) {
-                        Log.d("Settings:", "Setting: " + thisSetting.id)
+                        NewDebugLog("Settings:", "Setting: " + thisSetting.id)
                         coroutineScope.launch {
                             setting.emit(
                                 ApiEvent.Settings(data = thisSetting)
@@ -158,23 +161,36 @@ class SettingsApiService(private var api: ApiService) {
                     }
                 } else {
                     val code = response.code()
-                    Log.d("Settings:", code.toString())
+                    NewDebugLog("Settings:", code.toString())
                 }
             }
         } catch (e: HttpException) {
             val response = e.response()
             val errorCode = e.code()
             if (response != null) {
-                Log.d("Settings:", response.message() + ":" + errorCode.toString())
+                NewDebugLog("Settings:", response.message() + ":" + errorCode.toString())
             } else {
-                Log.d("Settings:", errorCode.toString())
+                NewDebugLog("Settings:", errorCode.toString())
             }
         } catch (e: UnknownHostException) {
-            Log.d("Settings:", e.message.toString())
+            NewDebugLog("Settings:", e.message.toString())
         } catch (e: Exception) {
-            Log.d("Settings:", e.message.toString())
+            NewDebugLog("Settings:", e.message.toString())
         } finally {
             busy = false
         }
+    }
+
+    private suspend fun NewDebugLog(tag: String, message: String) {
+        Log.d(tag, message)
+        debugLogs.emit(
+            Resource.Success(
+                data = DebugLog(
+                    phoneId = "",
+                    timestamp = System.currentTimeMillis() / 1000,
+                    event = message
+                )
+            )
+        )
     }
 }

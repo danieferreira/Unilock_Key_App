@@ -7,6 +7,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.df.unilockkey.agent.PhoneService
+import com.df.unilockkey.agent.SettingsApiService
 import com.df.unilockkey.data.ConnectionState
 import com.df.unilockkey.data.KeyReceiverManager
 import com.df.unilockkey.repository.AppDatabase
@@ -21,6 +22,7 @@ import com.df.unilockkey.service.SettingsService
 import com.df.unilockkey.util.ApiEvent
 import com.df.unilockkey.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -35,9 +37,10 @@ class KeyInfoViewModel @Inject constructor(
     private val eventLogService: EventLogService,
     private val phoneService: PhoneService,
     private val syncDatabase: DatabaseSyncService,
-    private val settingsService: SettingsService
+    private val settingsService: SettingsService,
+    private val settingsApiService: SettingsApiService
 ): ViewModel() {
-
+    var debugLog = MutableStateFlow<List<String>>(mutableListOf())
     var initialisingMessage by mutableStateOf<String?>(null)
     var errorMessage by mutableStateOf<String?>(null)
     var keyId by mutableStateOf<String>("")
@@ -190,11 +193,45 @@ class KeyInfoViewModel @Inject constructor(
             val setting = settingsService.findNewSetting(keyNumber)
             if (setting != null) {
                 Log.d("BLEReceiverManager", keyNumber.toString() + ": Sending Settings")
+                debugLog.value += keyNumber.toString() + ": Sending Settings"
                 keyReceiverManager.sendSettings(setting)
             }
         }
     }
 
+    private fun subscribeToDebugLog1() {
+        viewModelScope.launch {
+            syncDatabase.debugLogs.collect{ result ->
+                when(result) {
+                    is Resource.Success -> {
+                        debugLog.value += (result.data.event)
+                    }
+                    is Resource.Loading -> {
+                    }
+                    is Resource.Error -> {
+                        debugLog.value += (result.errorMessage)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun subscribeToDebugLog2() {
+        viewModelScope.launch {
+            settingsApiService.debugLogs.collect{ result ->
+                when(result) {
+                    is Resource.Success -> {
+                        debugLog.value += (result.data.event)
+                    }
+                    is Resource.Loading -> {
+                    }
+                    is Resource.Error -> {
+                        debugLog.value += (result.errorMessage)
+                    }
+                }
+            }
+        }
+    }
 
     private fun subscribeToChanged() {
         viewModelScope.launch {
@@ -361,6 +398,8 @@ class KeyInfoViewModel @Inject constructor(
         errorMessage = null
         subscribeToChanged()
         subscribeToPhoneService()
+        subscribeToDebugLog1()
+        subscribeToDebugLog2()
         keyReceiverManager.startReceiving()
     }
 
