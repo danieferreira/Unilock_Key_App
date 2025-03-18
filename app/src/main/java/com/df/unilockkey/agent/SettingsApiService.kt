@@ -7,6 +7,7 @@ import com.df.unilockkey.util.ApiEvent
 import com.df.unilockkey.util.Resource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
@@ -22,27 +23,28 @@ class SettingsApiService(private var api: ApiService) {
 
     suspend fun getSettings() {
         try {
-            if (!busy) {
-                busy = true;
-                val response = api.getSettings()
-                if (response.isSuccessful) {
-                    val body = response.body()
-                    for (setting in body!!) {
-                        if (setting.lock != null) {
-                            NewDebugLog("Settings:", "Settings for " + setting.lock.lockNumber)
-                        } else if (setting.key != null) {
-                            NewDebugLog("Settings:", "Settings for " + setting.key.keyNumber + ". " + setting.id)
-                        }
+            while (busy) {
+                delay(100)
+            }
+            busy = true;
+            val response = api.getSettings()
+            if (response.isSuccessful) {
+                val body = response.body()
+                for (setting in body!!) {
+                    if (setting.lock != null) {
+                        //NewDebugLog("Settings:", "Settings for " + setting.lock.lockNumber)
+                    } else if (setting.key != null) {
+                        NewDebugLog("Settings:", "Settings for " + setting.key.keyNumber + ". " + setting.id)
                     }
-                    coroutineScope.launch {
-                        settings.emit(
-                            ApiEvent.Settings(data = body)
-                        )
-                    }
-                } else {
-                    val code = response.code()
-                    NewDebugLog("Settings:", code.toString())
                 }
+                coroutineScope.launch {
+                    settings.emit(
+                        ApiEvent.Settings(data = body)
+                    )
+                }
+            } else {
+                val code = response.code()
+                NewDebugLog("Settings:", code.toString())
             }
         } catch (e: HttpException) {
             val response = e.response()
@@ -63,27 +65,28 @@ class SettingsApiService(private var api: ApiService) {
 
     suspend fun getSettingsByLock(lockNumber: Int) {
         try {
-            if (!busy) {
-                busy = true;
-                val response = api.getSettingsByLock(lockNumber)
-                if (response.isSuccessful) {
-                    val body = response.body()
-                    for (setting in body!!) {
-                        if (setting.lock != null) {
-                            NewDebugLog("Settings:", "Settings for Lock:" + setting.lock.lockNumber)
-                        } else if (setting.key != null) {
-                            NewDebugLog("Settings:", "Settings for Key:" + setting.key.keyNumber + ", " + setting.id)
-                        }
+            while (busy) {
+                delay(100)
+            }
+            busy = true;
+            val response = api.getSettingsByLock(lockNumber)
+            if (response.isSuccessful) {
+                val body = response.body()
+                for (setting in body!!) {
+                    if (setting.lock != null) {
+                        NewDebugLog("Settings:", "Settings for Lock:" + setting.lock.lockNumber + ", " + setting.id)
+                    } else if (setting.key != null) {
+                        NewDebugLog("Settings:", "Settings for Key:" + setting.key.keyNumber + ", " + setting.id)
                     }
-                    coroutineScope.launch {
-                        settings.emit(
-                            ApiEvent.Settings(data = body)
-                        )
-                    }
-                } else {
-                    val code = response.code()
-                    NewDebugLog("Settings:", code.toString())
                 }
+                coroutineScope.launch {
+                    settings.emit(
+                        ApiEvent.Settings(data = body)
+                    )
+                }
+            } else {
+                val code = response.code()
+                NewDebugLog("Settings:", code.toString())
             }
         } catch (e: HttpException) {
             val response = e.response()
@@ -104,28 +107,28 @@ class SettingsApiService(private var api: ApiService) {
 
     suspend fun getSettingsByKey(keyNumber: Int) {
         try {
-            if (!busy) {
-                busy = true;
-                val response = api.getSettingsByKey(keyNumber)
-                if (response.isSuccessful) {
-                    val body = response.body()
-                    for (setting in body!!) {
-                        if (setting.lock != null) {
-                            NewDebugLog("Settings:", "Settings for Lock:" + setting.lock.lockNumber)
-                        } else if (setting.key != null) {
-                            NewDebugLog("Settings:", "Settings for Key:" + setting.key.keyNumber + ", " + setting.id
-                            )
-                        }
+            while (busy) {
+                delay(100)
+            }
+            busy = true;
+            val response = api.getSettingsByKey(keyNumber)
+            if (response.isSuccessful) {
+                val body = response.body()
+                for (setting in body!!) {
+                    if (setting.lock != null) {
+                        NewDebugLog("Settings:", "Settings for Lock:" + setting.lock.lockNumber + ", " + setting.id)
+                    } else if (setting.key != null) {
+                        NewDebugLog("Settings:", "Settings for Key:" + setting.key.keyNumber + ", " + setting.id)
                     }
-                    coroutineScope.launch {
-                        settings.emit(
-                            ApiEvent.Settings(data = body)
-                        )
-                    }
-                } else {
-                    val code = response.code()
-                    NewDebugLog("Settings:", code.toString())
                 }
+                coroutineScope.launch {
+                    settings.emit(
+                        ApiEvent.Settings(data = body)
+                    )
+                }
+            } else {
+                val code = response.code()
+                NewDebugLog("Settings:", code.toString())
             }
         } catch (e: HttpException) {
             val response = e.response()
@@ -141,43 +144,6 @@ class SettingsApiService(private var api: ApiService) {
             NewDebugLog("Settings:", e.message.toString())
         } finally {
             busy = false;
-        }
-    }
-
-    suspend fun getSetting(id: Int) {
-        try {
-            if (!busy) {
-                busy = true;
-                val response = api.getSetting(id)
-                if (response.isSuccessful) {
-                    val thisSetting = response.body()
-                    if (thisSetting != null) {
-                        NewDebugLog("Settings:", "Setting: " + thisSetting.id)
-                        coroutineScope.launch {
-                            setting.emit(
-                                ApiEvent.Settings(data = thisSetting)
-                            )
-                        }
-                    }
-                } else {
-                    val code = response.code()
-                    NewDebugLog("Settings:", code.toString())
-                }
-            }
-        } catch (e: HttpException) {
-            val response = e.response()
-            val errorCode = e.code()
-            if (response != null) {
-                NewDebugLog("Settings:", response.message() + ":" + errorCode.toString())
-            } else {
-                NewDebugLog("Settings:", errorCode.toString())
-            }
-        } catch (e: UnknownHostException) {
-            NewDebugLog("Settings:", e.message.toString())
-        } catch (e: Exception) {
-            NewDebugLog("Settings:", e.message.toString())
-        } finally {
-            busy = false
         }
     }
 

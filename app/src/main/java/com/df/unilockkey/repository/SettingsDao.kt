@@ -22,6 +22,6 @@ interface SettingsDao {
     fun delete(setting: Settings)
     @Update
     fun update(setting: Settings)
-    @Query("SELECT * FROM settings WHERE settings.archived = :archived AND settings.configured = 1")
-    fun getAllByArchive(archived: Boolean): List<Settings>
+    @Query("SELECT * FROM settings WHERE settings.archived = :archived AND settings.configured = :configured")
+    fun getAllByArchive(archived: Boolean, configured: Boolean): List<Settings>
 }

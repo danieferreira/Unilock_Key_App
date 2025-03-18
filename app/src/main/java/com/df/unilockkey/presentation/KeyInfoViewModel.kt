@@ -22,6 +22,7 @@ import com.df.unilockkey.service.SettingsService
 import com.df.unilockkey.util.ApiEvent
 import com.df.unilockkey.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
@@ -56,6 +57,7 @@ class KeyInfoViewModel @Inject constructor(
     private var currentPhone: Phone? = null
     private var lockCount = 0
     private var currentLock = 0
+    private var isBusy = false;
 
     private fun checkKeyLimited(key: Unikey): Boolean {
         if (key.timeLimitEnabled) {
@@ -190,14 +192,39 @@ class KeyInfoViewModel @Inject constructor(
     private fun CheckKeySettings(keyNumber: Long) {
         //Check if there are new settings for this key
         viewModelScope.launch {
-            val setting = settingsService.findNewSetting(keyNumber)
+            val setting = settingsService.findKeySetting(keyNumber)
             if (setting != null) {
-                Log.d("BLEReceiverManager", keyNumber.toString() + ": Sending Settings")
-                debugLog.value += keyNumber.toString() + ": Sending Settings"
-                keyReceiverManager.sendSettings(setting)
+                isBusy = true
+                Log.d("KeyInfoViewModel", "Sending Key Settings: " +  keyNumber.toString() +"," + setting.id)
+                debugLog.value += "Sending Key Settings: " +  keyNumber.toString() +"," + setting.id
+                while (keyReceiverManager.isBusy) {
+                    delay(100)
+                }
+                keyReceiverManager.sendKeySettings(setting)
+                keyValid = "Configuration"
+                event = "Configuration"
             }
         }
     }
+
+    private fun CheckLockSettings(lockNumber: Long) {
+        //Check if there are new settings for this key
+        viewModelScope.launch {
+            val setting = settingsService.findLockSetting(lockNumber)
+            if (setting != null) {
+                isBusy = true
+                Log.d("KeyInfoViewModel", "Sending Lock Settings: " +  lockNumber.toString() +"," + setting.id)
+                debugLog.value += "Sending Lock Settings: " +  lockNumber.toString() +"," + setting.id
+                while (keyReceiverManager.isBusy) {
+                    delay(100)
+                }
+                keyReceiverManager.sendLockSettings(setting)
+                keyValid = "Configuration"
+                event = "Configuration"
+            }
+        }
+    }
+
 
     private fun subscribeToDebugLog1() {
         viewModelScope.launch {
@@ -233,6 +260,23 @@ class KeyInfoViewModel @Inject constructor(
         }
     }
 
+    private fun subscribeToDebugLog3() {
+        viewModelScope.launch {
+            keyReceiverManager.debugLogs.collect{ result ->
+                when(result) {
+                    is Resource.Success -> {
+                        debugLog.value += (result.data.event)
+                    }
+                    is Resource.Loading -> {
+                    }
+                    is Resource.Error -> {
+                        debugLog.value += (result.errorMessage)
+                    }
+                }
+            }
+        }
+    }
+
     private fun subscribeToChanged() {
         viewModelScope.launch {
             keyReceiverManager.data.collect{ result ->
@@ -253,11 +297,13 @@ class KeyInfoViewModel @Inject constructor(
                             val sdf: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
                             val date = LocalDateTime.now()
 
-                            if (result.data.lockId == "") {
-                                CheckKeySettings(keyId.toLong())
-                            } else {
+                            CheckKeySettings(keyId.toLong())
+
+                            if (result.data.lockId != "") {
                                 if (lockId != result.data.lockId) {
                                     lockId = result.data.lockId
+                                    CheckLockSettings(lockId.toLong())
+
                                     setKeyEnabled(false)
                                     try {
                                         val key = appDatabase.unikeyDao().findByKeyNumber(keyId.toInt())
@@ -291,11 +337,17 @@ class KeyInfoViewModel @Inject constructor(
                                                                 if (!checkValidRoute(lock)) {
                                                                     keyValid = "Route Invalid"
                                                                 } else {
-                                                                    if (checkKeyExpired(lock, key)) {
-                                                                        keyValid = "Key Expired"
-                                                                    } else {
-                                                                        setKeyEnabled(true)
-                                                                    }
+                                                                    //Check if it is sending a setting or not
+                                                                    //if (!isBusy) {
+                                                                        if (checkKeyExpired(lock, key)) {
+                                                                            keyValid = "Key Expired"
+                                                                        } else {
+                                                                            while (keyReceiverManager.isBusy) {
+                                                                                delay(100)
+                                                                            }
+                                                                            setKeyEnabled(true)
+                                                                        }
+                                                                    //}
                                                                 }
                                                             }
                                                         }
@@ -345,10 +397,12 @@ class KeyInfoViewModel @Inject constructor(
                         setKeyEnabled(false)
                         eventLog = EventLog()
                         event = ""
+                        isBusy = false
                     }
                     is Resource.Error -> {
                         connectionState = ConnectionState.Unitialised
                         errorMessage = result.errorMessage
+                        isBusy = false
                     }
                 }
             }
@@ -400,11 +454,15 @@ class KeyInfoViewModel @Inject constructor(
         subscribeToPhoneService()
         subscribeToDebugLog1()
         subscribeToDebugLog2()
+        subscribeToDebugLog3()
         keyReceiverManager.startReceiving()
     }
 
     fun setKeyEnabled(enabled: Boolean) {
         dataRepository.keyEnabled = enabled
+        if (enabled) {
+            keyReceiverManager.sendKeyEnabled()
+        }
     }
 
     override fun onCleared() {

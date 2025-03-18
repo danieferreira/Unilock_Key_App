@@ -17,6 +17,7 @@ import com.df.unilockkey.data.ConnectionState
 import com.df.unilockkey.data.KeyInfoResult
 import com.df.unilockkey.data.KeyReceiverManager
 import com.df.unilockkey.repository.DataRepository
+import com.df.unilockkey.repository.DebugLog
 import com.df.unilockkey.repository.Settings
 import com.df.unilockkey.service.SettingsService
 import com.df.unilockkey.util.Resource
@@ -41,8 +42,10 @@ class KeyBLEReceiverManager @Inject constructor(
     private val CHAR2_UUID = "0000ff02-0000-1000-8000-00805f9b34fb"
     private val CHAR3_UUID = "0000ff03-0000-1000-8000-00805f9b34fb"
     private val CHAR4_UUID = "0000ff04-0000-1000-8000-00805f9b34fb"
-
+    private val CHAR5_UUID = "0000ff05-0000-1000-8000-00805f9b34fb"
+    override val debugLogs: MutableSharedFlow<Resource<DebugLog>> = MutableSharedFlow()
     override val data: MutableSharedFlow<Resource<KeyInfoResult>> = MutableSharedFlow()
+    override var isBusy = false
 
     private val bleScanner by lazy {
         bluetoothAdapter.bluetoothLeScanner
@@ -99,6 +102,7 @@ class KeyBLEReceiverManager @Inject constructor(
                             )
                         )
                     }
+                    isBusy = false
                     gatt.close()
                 }
             } else {
@@ -190,7 +194,7 @@ class KeyBLEReceiverManager @Inject constructor(
                             )
                         }
                         //Enable the Key to open Lock
-                        sendKeyEnabled(gatt)
+                        sendKeyEnabled()
                     }
                     else -> {
                         Log.d("BLEReceiverManager", uuid.toString())
@@ -290,29 +294,34 @@ class KeyBLEReceiverManager @Inject constructor(
             status: Int
         ) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                Log.d("BLEReceiverManager", "Write Date success")
 //                coroutineScope.launch {
 //                    data.emit(
 //                        Resource.Loading(message = "Key Time set...")
 //                    )
 //                }
                 if (characteristic.uuid == UUID.fromString(CHAR3_UUID)) {
+                    Log.d("BLEReceiverManager", "Write Date success")
                     readKeyNumber(gatt)
-                }
-                if (characteristic.uuid == UUID.fromString(CHAR4_UUID)) {
+                } else if ((characteristic.uuid == UUID.fromString(CHAR4_UUID)) ||
+                    (characteristic.uuid == UUID.fromString(CHAR5_UUID)))
+                    {
                     //Mark Setting as Configured
                     settingsService.currentSetting.configured = true
-                    settingsService.currentSetting.implemented =System.currentTimeMillis()/1000
+                    settingsService.currentSetting.implemented = System.currentTimeMillis() / 1000
                     settingsService.update(settingsService.currentSetting)
-                    Log.d("BLEReceiverManager", "Setting Configured")
+                    coroutineScope.launch {
+                        NewDebugLog("BLEReceiverManager", "Write Settings success");
+                    }
+                    //gatt.executeReliableWrite();
                 }
             } else {
-                Log.d("BLEReceiverManager", "Write Date Failed!!")
+                Log.d("BLEReceiverManager", "Write Characteristic Failed!!")
             }
+            isBusy = false
         }
     }
 
-    private fun sendKeyEnabled(gatt: BluetoothGatt) {
+    override fun sendKeyEnabled() {
         if (dataRepository.keyEnabled) {
 
             val char1Service = findCharacteristic(SERVICE_UUID, CHAR1_UUID)
@@ -321,21 +330,49 @@ class KeyBLEReceiverManager @Inject constructor(
                 data[0] = 1;
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    gatt.writeCharacteristic(
+                    gatt?.writeCharacteristic(
                         char1Service,
                         data,
                         BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
                     )
                 } else {
                     char1Service.setValue(data)
-                    gatt.writeCharacteristic(char1Service)
+                    gatt?.writeCharacteristic(char1Service)
                 }
                 dataRepository.keyEnabled = false
             }
         }
     }
 
+    override fun sendKeyDate() {
+        isBusy = true
+        val char3Service = findCharacteristic(SERVICE_UUID, CHAR3_UUID)
+        if (char3Service != null) {
+            Log.d("BLEReceiverManager", "Set Key Date")
+            val calendar = Calendar.getInstance()
+            val data = ByteArray(6)
+            data[0] = (calendar.get(Calendar.YEAR) - 2000).toByte()
+            data[1] = calendar.get(Calendar.MONTH).toByte()
+            data[2] = calendar.get(Calendar.DAY_OF_MONTH).toByte()
+            data[3] = calendar.get(Calendar.HOUR_OF_DAY).toByte()
+            data[4] = calendar.get(Calendar.MINUTE).toByte()
+            data[5] = calendar.get(Calendar.SECOND).toByte()
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                gatt?.writeCharacteristic(
+                    char3Service,
+                    data,
+                    BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+                )
+            } else {
+                char3Service.setValue(data)
+                gatt?.writeCharacteristic(char3Service)
+            }
+        }
+    }
+
     private fun setKeyDate(gatt: BluetoothGatt) {
+        isBusy = true
         val char3Service = findCharacteristic(SERVICE_UUID, CHAR3_UUID)
         if (char3Service != null) {
             Log.d("BLEReceiverManager", "Set Key Date")
@@ -448,6 +485,7 @@ class KeyBLEReceiverManager @Inject constructor(
                 )
             )
         }
+        isBusy = false
         gatt?.disconnect()
     }
 
@@ -475,10 +513,10 @@ class KeyBLEReceiverManager @Inject constructor(
         gatt?.close()
     }
 
-    override fun sendSettings(setting: Settings) {
+    override fun sendKeySettings(setting: Settings) {
+        isBusy = true
         val char4Service = findCharacteristic(SERVICE_UUID, CHAR4_UUID)
         if (char4Service != null) {
-            Log.d("BLEReceiverManager", "Set Key Settings")
             var data = setting.password1.toByteArray()
             data += ','.code.toByte()
             data += setting.password2.toByteArray()
@@ -492,7 +530,7 @@ class KeyBLEReceiverManager @Inject constructor(
             if (setting.newPropgrammingPassword != null) {
                 data += setting.newPropgrammingPassword.toByteArray()
             }
-
+            //gatt?.beginReliableWrite()
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 gatt?.writeCharacteristic(
                     char4Service,
@@ -504,5 +542,49 @@ class KeyBLEReceiverManager @Inject constructor(
                 gatt?.writeCharacteristic(char4Service)
             }
         }
+    }
+
+    override fun sendLockSettings(setting: Settings) {
+        isBusy = true
+        val char5Service = findCharacteristic(SERVICE_UUID, CHAR5_UUID)
+        if (char5Service != null) {
+            var data = setting.password1.toByteArray()
+            data += ','.code.toByte()
+            data += setting.password2.toByteArray()
+            data += ','.code.toByte()
+            data += setting.password3.toByteArray()
+            data += ','.code.toByte()
+            if (setting.oldPropgrammingPassword != null) {
+                data += setting.oldPropgrammingPassword.toByteArray()
+                data += ','.code.toByte()
+            }
+            if (setting.newPropgrammingPassword != null) {
+                data += setting.newPropgrammingPassword.toByteArray()
+            }
+            //gatt?.beginReliableWrite()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                gatt?.writeCharacteristic(
+                    char5Service,
+                    data,
+                    BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+                )
+            } else {
+                char5Service.setValue(data)
+                gatt?.writeCharacteristic(char5Service)
+            }
+        }
+    }
+
+    private suspend fun NewDebugLog(tag: String, message: String) {
+        Log.d(tag, message)
+        debugLogs.emit(
+            Resource.Success(
+                data = DebugLog(
+                    phoneId = "",
+                    timestamp = System.currentTimeMillis() / 1000,
+                    event = message
+                )
+            )
+        )
     }
 }

@@ -87,7 +87,7 @@ class DatabaseSyncService @Inject constructor(
     private fun syncEventLogs() {
         scope.launch {
             try {
-                NewDebugLog("DatabaseSyncService", "Synchronise Database")
+                //NewDebugLog("DatabaseSyncService", "Synchronise Database")
                 syncLocks()
                 syncSettings();
                 logEventService.syncEventLogs()
@@ -368,12 +368,17 @@ class DatabaseSyncService @Inject constructor(
         if (!syncSettingBusy) {
             try {
                 syncSettingBusy = true
-                val settings = appDatabase.settingsDao().getAllByArchive(false)
+                val settings = appDatabase.settingsDao().getAllByArchive(false, true)
                 for (setting in settings) {
                     setting.archived = true
                     api.putSettings(setting.id, setting)
                     appDatabase.settingsDao().update(setting)
-                    NewDebugLog("syncSettings:", "Archive: Setting")
+                    if (setting.key != null) {
+                        NewDebugLog("syncSettings:", "Archive: Key Setting: " + setting.key.keyNumber + "," + setting.id)
+                    }
+                    if (setting.lock != null) {
+                        NewDebugLog("syncSettings:", "Archive: Lock Setting: " + setting.lock.lockNumber + "," + setting.id)
+                    }
                 }
             } catch (e: HttpException) {
                 val response = e.response()
@@ -396,17 +401,17 @@ class DatabaseSyncService @Inject constructor(
 
     private fun NewDebugLog(tag: String, message: String) {
         Log.d(tag, message)
-        scope.launch {
-            debugLogs.emit(
-                Resource.Success(
-                    data = DebugLog(
-                        phoneId = phoneId,
-                        timestamp = System.currentTimeMillis() / 1000,
-                        event = message
-                    )
-                )
-            )
-        }
+        //scope.launch {
+        //    debugLogs.emit(
+        //        Resource.Success(
+        //            data = DebugLog(
+        //                phoneId = phoneId,
+        //                timestamp = System.currentTimeMillis() / 1000,
+        //                event = message
+        //            )
+        //        )
+        //    )
+        //}
     }
 
     private suspend fun createEvent(msg: String) {
