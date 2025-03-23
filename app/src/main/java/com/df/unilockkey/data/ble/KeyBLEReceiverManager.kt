@@ -27,8 +27,11 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import java.util.Calendar
 import java.util.Date
+import java.util.Timer
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
+import kotlin.concurrent.timerTask
 
 @SuppressLint("MissingPermission")
 class KeyBLEReceiverManager @Inject constructor(
@@ -45,7 +48,9 @@ class KeyBLEReceiverManager @Inject constructor(
     private val CHAR5_UUID = "0000ff05-0000-1000-8000-00805f9b34fb"
     override val debugLogs: MutableSharedFlow<Resource<DebugLog>> = MutableSharedFlow()
     override val data: MutableSharedFlow<Resource<KeyInfoResult>> = MutableSharedFlow()
-    override var isBusy = false
+    override var isBusy = AtomicBoolean(false)
+    private var timeoutTimer: Timer = Timer()
+    private var currentConnectionAttempt = 0
 
     private val bleScanner by lazy {
         bluetoothAdapter.bluetoothLeScanner
@@ -75,11 +80,10 @@ class KeyBLEReceiverManager @Inject constructor(
         }
     }
 
-    private var currentConnectionAttempt = 1
-
     private val gattCallback = object : BluetoothGattCallback() {
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
+                currentConnectionAttempt = 0
                 if (newState == BluetoothProfile.STATE_CONNECTED) {
                     coroutineScope.launch {
                         data.emit(Resource.Loading(message = "Discovering..."))
@@ -102,23 +106,36 @@ class KeyBLEReceiverManager @Inject constructor(
                             )
                         )
                     }
-                    isBusy = false
+                    setBusy(false)
                     gatt.close()
+                } else {
+                    coroutineScope.launch {
+                        Log.d("KeyBLEReceiverManager", "Unknown Connection State: ($newState)")
+                    }
+                }
+            } else if (status == 8) {
+                gatt.close()
+                startReceiving()
+                currentConnectionAttempt += 1
+                coroutineScope.launch {
+                    Log.d("KeyBLEReceiverManager", "Connection Timeout")
                 }
             } else {
                 gatt.close()
-                startReceiving()
-//                currentConnectionAttempt += 1
-//                coroutineScope.launch {
-//                    data.emit(Resource.Loading(message = "Retry ($currentConnectionAttempt)..."))
-//                }
-//                if (currentConnectionAttempt <= 5) {
-//                    startReceiving()
-//                } else {
-//                    coroutineScope.launch {
-//                        data.emit(Resource.Error("No Connection"))
-//                    }
-//                }
+                if (currentConnectionAttempt > 0) {
+                    coroutineScope.launch {
+                        Log.d("KeyBLEReceiverManager", "Retry Scanning: ($currentConnectionAttempt)...")
+                    }
+                }
+                currentConnectionAttempt += 1
+
+                if (currentConnectionAttempt <= 5) {
+                    startReceiving()
+                } else {
+                    coroutineScope.launch {
+                        Log.d("KeyBLEReceiverManager", "Start Scanning Failed!")
+                    }
+                }
             }
         }
 
@@ -310,14 +327,14 @@ class KeyBLEReceiverManager @Inject constructor(
                     settingsService.currentSetting.implemented = System.currentTimeMillis() / 1000
                     settingsService.update(settingsService.currentSetting)
                     coroutineScope.launch {
-                        NewDebugLog("BLEReceiverManager", "Write Settings success");
+                        newDebugLog("BLEReceiverManager", "Write Settings success");
                     }
                     //gatt.executeReliableWrite();
                 }
             } else {
                 Log.d("BLEReceiverManager", "Write Characteristic Failed!!")
             }
-            isBusy = false
+            setBusy(false)
         }
     }
 
@@ -345,7 +362,7 @@ class KeyBLEReceiverManager @Inject constructor(
     }
 
     override fun sendKeyDate() {
-        isBusy = true
+        setBusy(true)
         val char3Service = findCharacteristic(SERVICE_UUID, CHAR3_UUID)
         if (char3Service != null) {
             Log.d("BLEReceiverManager", "Set Key Date")
@@ -372,7 +389,7 @@ class KeyBLEReceiverManager @Inject constructor(
     }
 
     private fun setKeyDate(gatt: BluetoothGatt) {
-        isBusy = true
+        setBusy(true)
         val char3Service = findCharacteristic(SERVICE_UUID, CHAR3_UUID)
         if (char3Service != null) {
             Log.d("BLEReceiverManager", "Set Key Date")
@@ -485,7 +502,7 @@ class KeyBLEReceiverManager @Inject constructor(
                 )
             )
         }
-        isBusy = false
+        setBusy(false)
         gatt?.disconnect()
     }
 
@@ -514,7 +531,7 @@ class KeyBLEReceiverManager @Inject constructor(
     }
 
     override fun sendKeySettings(setting: Settings) {
-        isBusy = true
+        setBusy(true)
         val char4Service = findCharacteristic(SERVICE_UUID, CHAR4_UUID)
         if (char4Service != null) {
             var data = setting.password1.toByteArray()
@@ -529,6 +546,7 @@ class KeyBLEReceiverManager @Inject constructor(
             }
             if (setting.newPropgrammingPassword != null) {
                 data += setting.newPropgrammingPassword.toByteArray()
+                data += ','.code.toByte()
             }
             //gatt?.beginReliableWrite()
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -545,7 +563,7 @@ class KeyBLEReceiverManager @Inject constructor(
     }
 
     override fun sendLockSettings(setting: Settings) {
-        isBusy = true
+        setBusy(true)
         val char5Service = findCharacteristic(SERVICE_UUID, CHAR5_UUID)
         if (char5Service != null) {
             var data = setting.password1.toByteArray()
@@ -560,6 +578,7 @@ class KeyBLEReceiverManager @Inject constructor(
             }
             if (setting.newPropgrammingPassword != null) {
                 data += setting.newPropgrammingPassword.toByteArray()
+                data += ','.code.toByte()
             }
             //gatt?.beginReliableWrite()
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -575,7 +594,7 @@ class KeyBLEReceiverManager @Inject constructor(
         }
     }
 
-    private suspend fun NewDebugLog(tag: String, message: String) {
+    private suspend fun newDebugLog(tag: String, message: String) {
         Log.d(tag, message)
         debugLogs.emit(
             Resource.Success(
@@ -586,5 +605,19 @@ class KeyBLEReceiverManager @Inject constructor(
                 )
             )
         )
+    }
+
+    private fun setBusy(value: Boolean) {
+        isBusy.set(value)
+        if (value) {
+            timeoutTimer = Timer()
+            timeoutTimer.schedule(
+                timerTask()
+                {
+                    isBusy.set(false)
+                }, 5*1000)
+        } else {
+            timeoutTimer.cancel()
+        }
     }
 }

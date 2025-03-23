@@ -9,18 +9,22 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import java.net.UnknownHostException
+import java.util.Timer
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.concurrent.timerTask
 
 class RouteService(private var api: ApiService) {
     private val coroutineScope= CoroutineScope(Dispatchers.Default)
     val routes: MutableSharedFlow<ApiEvent<Array<Route>>> = MutableSharedFlow()
     val route: MutableSharedFlow<ApiEvent<Route>> = MutableSharedFlow()
 
-    private var busy: Boolean = false
+    private var isBusy = AtomicBoolean(false)
+    private var timeoutTimer: Timer = Timer()
 
     suspend fun getRoutes() {
         try {
-            if (!busy) {
-                busy = true;
+            if (!isBusy.get()) {
+                setBusy(true)
                 val response = api.getRoutes()
                 if (response.isSuccessful) {
                     val body = response.body()
@@ -50,14 +54,14 @@ class RouteService(private var api: ApiService) {
         } catch (e: Exception) {
             Log.d("Routes:", e.message.toString())
         } finally {
-            busy = false;
+            setBusy(false);
         }
     }
 
     suspend fun getRoute(id: Int) {
         try {
-            if (!busy) {
-                busy = true;
+            if (!isBusy.get()) {
+                setBusy(true)
                 val response = api.getRoute(id)
                 if (response.isSuccessful) {
                     val thisRoute = response.body()
@@ -87,7 +91,21 @@ class RouteService(private var api: ApiService) {
         } catch (e: Exception) {
             Log.d("Route:", e.message.toString())
         } finally {
-            busy = false
+            setBusy(false)
+        }
+    }
+
+    private fun setBusy(value: Boolean) {
+        isBusy.set(value)
+        if (value) {
+            timeoutTimer = Timer()
+            timeoutTimer.schedule(
+                timerTask()
+                {
+                    isBusy.set(false)
+                }, 10*1000)
+        } else {
+            timeoutTimer.cancel()
         }
     }
 }

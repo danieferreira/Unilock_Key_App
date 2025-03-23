@@ -12,6 +12,9 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import java.net.UnknownHostException
+import java.util.Timer
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.concurrent.timerTask
 
 class SettingsApiService(private var api: ApiService) {
     private val coroutineScope= CoroutineScope(Dispatchers.Default)
@@ -19,22 +22,23 @@ class SettingsApiService(private var api: ApiService) {
     val setting: MutableSharedFlow<ApiEvent<Settings>> = MutableSharedFlow()
     val debugLogs: MutableSharedFlow<Resource<DebugLog>> = MutableSharedFlow()
 
-    private var busy: Boolean = false
+    private var isBusy = AtomicBoolean(false)
+    private var timeoutTimer: Timer = Timer()
 
     suspend fun getSettings() {
         try {
-            while (busy) {
+            while (isBusy.get()) {
                 delay(100)
             }
-            busy = true;
+            setBusy(true);
             val response = api.getSettings()
             if (response.isSuccessful) {
                 val body = response.body()
                 for (setting in body!!) {
                     if (setting.lock != null) {
-                        //NewDebugLog("Settings:", "Settings for " + setting.lock.lockNumber)
+                        newDebugLog("Settings:", "Settings for Lock: " + setting.lock.lockNumber+ ", " + setting.id)
                     } else if (setting.key != null) {
-                        NewDebugLog("Settings:", "Settings for " + setting.key.keyNumber + ". " + setting.id)
+                        newDebugLog("Settings:", "Settings for Key: " + setting.key.keyNumber + ", " + setting.id)
                     }
                 }
                 coroutineScope.launch {
@@ -44,39 +48,39 @@ class SettingsApiService(private var api: ApiService) {
                 }
             } else {
                 val code = response.code()
-                NewDebugLog("Settings:", code.toString())
+                newDebugLog("Settings:", code.toString())
             }
         } catch (e: HttpException) {
             val response = e.response()
             val errorCode = e.code()
             if (response != null) {
-                NewDebugLog("Settings:", response.message() + ":" + errorCode.toString())
+                newDebugLog("Settings:", response.message() + ":" + errorCode.toString())
             } else {
-                NewDebugLog("Settings:", errorCode.toString())
+                newDebugLog("Settings:", errorCode.toString())
             }
         } catch (e: UnknownHostException) {
-            NewDebugLog("Settings:", e.message.toString())
+            newDebugLog("Settings:", e.message.toString())
         } catch (e: Exception) {
-            NewDebugLog("Settings:", e.message.toString())
+            newDebugLog("Settings:", e.message.toString())
         } finally {
-            busy = false;
+            setBusy(false)
         }
     }
 
     suspend fun getSettingsByLock(lockNumber: Int) {
         try {
-            while (busy) {
+            while (isBusy.get()) {
                 delay(100)
             }
-            busy = true;
+            setBusy(true)
             val response = api.getSettingsByLock(lockNumber)
             if (response.isSuccessful) {
                 val body = response.body()
                 for (setting in body!!) {
                     if (setting.lock != null) {
-                        NewDebugLog("Settings:", "Settings for Lock:" + setting.lock.lockNumber + ", " + setting.id)
+                        newDebugLog("Settings:", "Settings for Lock:" + setting.lock.lockNumber + ", " + setting.id)
                     } else if (setting.key != null) {
-                        NewDebugLog("Settings:", "Settings for Key:" + setting.key.keyNumber + ", " + setting.id)
+                        newDebugLog("Settings:", "Settings for Key:" + setting.key.keyNumber + ", " + setting.id)
                     }
                 }
                 coroutineScope.launch {
@@ -86,39 +90,39 @@ class SettingsApiService(private var api: ApiService) {
                 }
             } else {
                 val code = response.code()
-                NewDebugLog("Settings:", code.toString())
+                newDebugLog("Settings:", code.toString())
             }
         } catch (e: HttpException) {
             val response = e.response()
             val errorCode = e.code()
             if (response != null) {
-                NewDebugLog("Settings:", response.message() + ":" + errorCode.toString())
+                newDebugLog("Settings:", response.message() + ":" + errorCode.toString())
             } else {
-                NewDebugLog("Settings:", errorCode.toString())
+                newDebugLog("Settings:", errorCode.toString())
             }
         } catch (e: UnknownHostException) {
-            NewDebugLog("Settings:", e.message.toString())
+            newDebugLog("Settings:", e.message.toString())
         } catch (e: Exception) {
-            NewDebugLog("Settings:", e.message.toString())
+            newDebugLog("Settings:", e.message.toString())
         } finally {
-            busy = false;
+            setBusy(false)
         }
     }
 
     suspend fun getSettingsByKey(keyNumber: Int) {
         try {
-            while (busy) {
+            while (isBusy.get()) {
                 delay(100)
             }
-            busy = true;
+            setBusy(true)
             val response = api.getSettingsByKey(keyNumber)
             if (response.isSuccessful) {
                 val body = response.body()
                 for (setting in body!!) {
                     if (setting.lock != null) {
-                        NewDebugLog("Settings:", "Settings for Lock:" + setting.lock.lockNumber + ", " + setting.id)
+                        newDebugLog("Settings:", "Settings for Lock:" + setting.lock.lockNumber + ", " + setting.id)
                     } else if (setting.key != null) {
-                        NewDebugLog("Settings:", "Settings for Key:" + setting.key.keyNumber + ", " + setting.id)
+                        newDebugLog("Settings:", "Settings for Key:" + setting.key.keyNumber + ", " + setting.id)
                     }
                 }
                 coroutineScope.launch {
@@ -128,26 +132,26 @@ class SettingsApiService(private var api: ApiService) {
                 }
             } else {
                 val code = response.code()
-                NewDebugLog("Settings:", code.toString())
+                newDebugLog("Settings:", code.toString())
             }
         } catch (e: HttpException) {
             val response = e.response()
             val errorCode = e.code()
             if (response != null) {
-                NewDebugLog("Settings:", response.message() + ":" + errorCode.toString())
+                newDebugLog("Settings:", response.message() + ":" + errorCode.toString())
             } else {
-                NewDebugLog("Settings:", errorCode.toString())
+                newDebugLog("Settings:", errorCode.toString())
             }
         } catch (e: UnknownHostException) {
-            NewDebugLog("Settings:", e.message.toString())
+            newDebugLog("Settings:", e.message.toString())
         } catch (e: Exception) {
-            NewDebugLog("Settings:", e.message.toString())
+            newDebugLog("Settings:", e.message.toString())
         } finally {
-            busy = false;
+            setBusy(false)
         }
     }
 
-    private suspend fun NewDebugLog(tag: String, message: String) {
+    private suspend fun newDebugLog(tag: String, message: String) {
         Log.d(tag, message)
         debugLogs.emit(
             Resource.Success(
@@ -158,5 +162,19 @@ class SettingsApiService(private var api: ApiService) {
                 )
             )
         )
+    }
+
+    private fun setBusy(value: Boolean) {
+        isBusy.set(value)
+        if (value) {
+            timeoutTimer = Timer()
+            timeoutTimer.schedule(
+                timerTask()
+                {
+                    isBusy.set(false)
+                }, 30*1000)
+        } else {
+            timeoutTimer.cancel()
+        }
     }
 }

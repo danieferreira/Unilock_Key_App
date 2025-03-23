@@ -24,6 +24,7 @@ import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import java.net.UnknownHostException
 import java.util.Timer
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import kotlin.concurrent.timerTask
 
@@ -45,15 +46,15 @@ class DatabaseSyncService @Inject constructor(
 
     private val scope = CoroutineScope(Job() + Dispatchers.Main)
 
-    private var lockBusy = false
-    private var syncSettingBusy = false
+    private var isBusy = AtomicBoolean(false)
+    private var timeoutTimer: Timer = Timer()
+
     var LoggedIn: Boolean = false
     var phoneId: String? = null
 
     fun startSync(thisPhoneId: String?) {
         phoneId = thisPhoneId
-        lockBusy = false;
-        LoggedIn = false;
+        setBusy(false)
         syncDatabase()
         val funtimer: Timer = Timer()
         funtimer.schedule(
@@ -79,7 +80,7 @@ class DatabaseSyncService @Inject constructor(
                     phoneService.getPhone(phoneId)
                 }
             } catch (err: Exception) {
-                NewDebugLog("DatabaseSyncService", err.message.toString())
+                newDebugLog("DatabaseSyncService", err.message.toString())
             }
         }
     }
@@ -93,7 +94,7 @@ class DatabaseSyncService @Inject constructor(
                 logEventService.syncEventLogs()
                 getPhone(phoneId)
             } catch (err: Exception) {
-                NewDebugLog("DatabaseSyncService", err.message.toString())
+                newDebugLog("DatabaseSyncService", err.message.toString())
 
             }
         }
@@ -104,7 +105,7 @@ class DatabaseSyncService @Inject constructor(
             try {
                 keyService.getKeys()
             } catch (err: Exception) {
-                NewDebugLog("DatabaseSyncService", err.message.toString())
+                newDebugLog("DatabaseSyncService", err.message.toString())
             }
         }
     }
@@ -115,7 +116,7 @@ class DatabaseSyncService @Inject constructor(
             try {
                 auth.login(LoginRequest(username, password))
             } catch (err: Exception) {
-                NewDebugLog("DatabaseSyncService", err.message.toString())
+                newDebugLog("DatabaseSyncService", err.message.toString())
             }
         }
     }
@@ -150,7 +151,7 @@ class DatabaseSyncService @Inject constructor(
                                 settingsService.getSettingsByKey(key.keyNumber)
                             }
                         } catch (err: Exception) {
-                            NewDebugLog("DatabaseSyncService", err.message.toString())
+                            newDebugLog("DatabaseSyncService", err.message.toString())
                         }
                     }
                     else -> {}
@@ -175,7 +176,7 @@ class DatabaseSyncService @Inject constructor(
                                 }
                             }
                         } catch (err: Exception) {
-                            NewDebugLog("DatabaseSyncService", err.message.toString())
+                            newDebugLog("DatabaseSyncService", err.message.toString())
                         }
                     }
                     else -> {}
@@ -196,7 +197,7 @@ class DatabaseSyncService @Inject constructor(
                                 }
                             }
                         } catch (err: Exception) {
-                                NewDebugLog("DatabaseSyncService", err.message.toString())
+                                newDebugLog("DatabaseSyncService", err.message.toString())
                         }
                     }
                     else -> {}
@@ -227,7 +228,7 @@ class DatabaseSyncService @Inject constructor(
                                 }
                             }
                         } catch (err: Exception) {
-                            NewDebugLog("DatabaseSyncService", err.message.toString())
+                            newDebugLog("DatabaseSyncService", err.message.toString())
                         }
                     }
                     else -> {}
@@ -249,7 +250,7 @@ class DatabaseSyncService @Inject constructor(
                                 }
                             }
                         } catch (err: Exception) {
-                            NewDebugLog("DatabaseSyncService", err.message.toString())
+                            newDebugLog("DatabaseSyncService", err.message.toString())
                         }
                     }
                     else -> {}
@@ -279,7 +280,7 @@ class DatabaseSyncService @Inject constructor(
                                 }
                             }
                         } catch (err: Exception) {
-                            NewDebugLog("DatabaseSyncService", err.message.toString())
+                            newDebugLog("DatabaseSyncService", err.message.toString())
                         }
                         getKeys();
                     }
@@ -305,7 +306,7 @@ class DatabaseSyncService @Inject constructor(
                                 }
                             }
                         } catch (err: Exception) {
-                            NewDebugLog("DatabaseSyncService", err.message.toString())
+                            newDebugLog("DatabaseSyncService", err.message.toString())
                         }
                     }
                     else -> {}
@@ -327,7 +328,7 @@ class DatabaseSyncService @Inject constructor(
                                 }
                             }
                         } catch (err: Exception) {
-                            NewDebugLog("DatabaseSyncService", err.message.toString())
+                            newDebugLog("DatabaseSyncService", err.message.toString())
                         }
                     }
                     else -> {}
@@ -337,81 +338,81 @@ class DatabaseSyncService @Inject constructor(
     }
 
     suspend fun syncLocks() {
-        if (!lockBusy) {
+        if (!isBusy.get()) {
             try {
-                lockBusy = true
+                setBusy(true)
                 val locks = appDatabase.unilockDao().getAllByArchive(false)
                 for (lock in locks) {
                     lock.archived = true
                     api.putLock(lock.lockNumber, lock)
                     appDatabase.unilockDao().update(lock)
-                    NewDebugLog("syncLocks:", "Archive: " +  lock.lockNumber.toString())
+                    newDebugLog("syncLocks:", "Archive: " +  lock.lockNumber.toString())
                 }
             } catch (e: HttpException) {
                 val response = e.response()
                 val errorCode = e.code()
                 if (response != null) {
-                    NewDebugLog("syncLocks:", response.message() + ":" + errorCode.toString())
+                    newDebugLog("syncLocks:", response.message() + ":" + errorCode.toString())
                 } else {
-                    NewDebugLog("syncLocks:", "ErrorCode: $errorCode")
+                    newDebugLog("syncLocks:", "ErrorCode: $errorCode")
                 }
             } catch (e: Exception) {
-                NewDebugLog("syncLocks:", e.message.toString())
+                newDebugLog("syncLocks:", e.message.toString())
                 createEvent("syncLocks: " + e.message.toString())
             } finally {
-                lockBusy = false
+                setBusy(false)
             }
         }
     }
 
-    suspend fun syncSettings() {
-        if (!syncSettingBusy) {
+    private suspend fun syncSettings() {
+        if (!isBusy.get()) {
             try {
-                syncSettingBusy = true
+                setBusy(true)
                 val settings = appDatabase.settingsDao().getAllByArchive(false, true)
                 for (setting in settings) {
                     setting.archived = true
                     api.putSettings(setting.id, setting)
                     appDatabase.settingsDao().update(setting)
                     if (setting.key != null) {
-                        NewDebugLog("syncSettings:", "Archive: Key Setting: " + setting.key.keyNumber + "," + setting.id)
+                        newDebugLog("syncSettings:", "Archive: Key Setting: " + setting.key.keyNumber + "," + setting.id)
                     }
                     if (setting.lock != null) {
-                        NewDebugLog("syncSettings:", "Archive: Lock Setting: " + setting.lock.lockNumber + "," + setting.id)
+                        newDebugLog("syncSettings:", "Archive: Lock Setting: " + setting.lock.lockNumber + "," + setting.id)
                     }
                 }
             } catch (e: HttpException) {
                 val response = e.response()
                 val errorCode = e.code()
                 if (response != null) {
-                    NewDebugLog("syncSettings:", response.message() + ":" + errorCode.toString())
+                    newDebugLog("syncSettings:", response.message() + ":" + errorCode.toString())
                 } else {
-                    NewDebugLog("syncSettings:", errorCode.toString())
+                    newDebugLog("syncSettings:", errorCode.toString())
                 }
                 scope.launch { auth.refreshLogin()}
             } catch (e: UnknownHostException) {
-                NewDebugLog("syncSettings:", e.message.toString())
+                newDebugLog("syncSettings:", e.message.toString())
             } catch (e: Exception) {
-                NewDebugLog("syncSettings:", e.message.toString())
+                newDebugLog("syncSettings:", e.message.toString())
             } finally {
-                syncSettingBusy = false;
+                setBusy(false)
             }
         }
     }
 
-    private fun NewDebugLog(tag: String, message: String) {
+    private fun newDebugLog(tag: String, message: String) {
         Log.d(tag, message)
-        //scope.launch {
-        //    debugLogs.emit(
-        //        Resource.Success(
-        //            data = DebugLog(
-        //                phoneId = phoneId,
-        //                timestamp = System.currentTimeMillis() / 1000,
-        //                event = message
-        //            )
-        //        )
-        //    )
-        //}
+        scope.launch {
+            debugLogs.emit(
+                Resource.Success(
+                    data = DebugLog(
+                        phoneId = phoneId,
+                        timestamp = System.currentTimeMillis() / 1000,
+                        event = message
+                    )
+                )
+            )
+        }
     }
 
     private suspend fun createEvent(msg: String) {
@@ -422,6 +423,20 @@ class DatabaseSyncService @Inject constructor(
         eventLog.lockNumber = 0
         eventLog.battery = "0.0"
         logEventService.logEvent(eventLog)
+    }
+
+    private fun setBusy(value: Boolean) {
+        isBusy.set(value)
+        if (value) {
+            timeoutTimer = Timer()
+            timeoutTimer.schedule(
+                timerTask()
+                {
+                    isBusy.set(false)
+                }, 30*1000)
+        } else {
+            timeoutTimer.cancel()
+        }
     }
 
 }

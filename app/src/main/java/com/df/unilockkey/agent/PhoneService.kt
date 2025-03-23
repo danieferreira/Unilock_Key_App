@@ -9,16 +9,20 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import java.net.UnknownHostException
+import java.util.Timer
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.concurrent.timerTask
 
 class PhoneService(private var api: ApiService, private var auth: Authenticate) {
     private val coroutineScope= CoroutineScope(Dispatchers.Default)
-    private var busy: Boolean = false
+    private var isBusy = AtomicBoolean(false)
+    private var timeoutTimer: Timer = Timer()
     val data: MutableSharedFlow<ApiEvent<Phone>> = MutableSharedFlow()
 
     suspend fun getPhone(phoneId: String) {
         try {
-            if (!busy) {
-                busy = true;
+            if (!isBusy.get()) {
+                setBusy(true)
                 val response = api.getPhone(phoneId)
                 if (response.isSuccessful) {
                     val phone = response.body()
@@ -49,7 +53,21 @@ class PhoneService(private var api: ApiService, private var auth: Authenticate) 
         } catch (e: Exception) {
             Log.d("Phone:", e.message.toString())
         } finally {
-            busy = false
+            setBusy(false)
+        }
+    }
+
+    private fun setBusy(value: Boolean) {
+        isBusy.set(value)
+        if (value) {
+            timeoutTimer = Timer()
+            timeoutTimer.schedule(
+                timerTask()
+                {
+                    isBusy.set(false)
+                }, 10*1000)
+        } else {
+            timeoutTimer.cancel()
         }
     }
 }

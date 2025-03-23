@@ -9,16 +9,20 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import java.net.UnknownHostException
+import java.util.Timer
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.concurrent.timerTask
 
 class KeyService(private var api: ApiService) {
     private val coroutineScope= CoroutineScope(Dispatchers.Default)
     val data: MutableSharedFlow<ApiEvent<Array<Unikey>>> = MutableSharedFlow()
-    private var busy: Boolean = false
+    private var isBusy = AtomicBoolean(false)
+    private var timeoutTimer: Timer = Timer()
 
     suspend fun getKeys() {
         try {
-            if (!busy) {
-                busy = true;
+            if (!isBusy.get()) {
+                setBusy(true)
                 val response = api.getKeys()
                 if (response.isSuccessful) {
                     val body = response.body()
@@ -48,7 +52,21 @@ class KeyService(private var api: ApiService) {
         } catch (e: Exception) {
             Log.d("Keys:", e.message.toString())
         } finally {
-            busy = false
+            setBusy(false)
+        }
+    }
+
+    private fun setBusy(value: Boolean) {
+        isBusy.set(value)
+        if (value) {
+            timeoutTimer = Timer()
+            timeoutTimer.schedule(
+                timerTask()
+                {
+                    isBusy.set(false)
+                }, 10*1000)
+        } else {
+            timeoutTimer.cancel()
         }
     }
 }

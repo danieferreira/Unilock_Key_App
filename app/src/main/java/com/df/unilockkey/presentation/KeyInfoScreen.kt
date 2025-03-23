@@ -3,6 +3,7 @@ package com.df.unilockkey.presentation
 import android.bluetooth.BluetoothAdapter
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -234,10 +235,14 @@ fun KeyInfoScreen(
             items(debugLogs.size) { index ->
                 Text(
                     text = debugLogs[index],
-                    modifier = Modifier.padding(0.dp)
+                    modifier = Modifier
+                        .padding(0.dp)
+                        .clickable{(viewModel.clearDebugLogs())}
                 )
             }
         }
     }
 }
+
+
 

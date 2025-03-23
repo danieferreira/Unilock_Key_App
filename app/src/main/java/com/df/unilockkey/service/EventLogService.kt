@@ -11,7 +11,10 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import java.net.UnknownHostException
+import java.util.Timer
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
+import kotlin.concurrent.timerTask
 
 class EventLogService  @Inject constructor(
     private val appDatabase: AppDatabase,
@@ -19,7 +22,8 @@ class EventLogService  @Inject constructor(
     private val auth: Authenticate,
 ){
     private val scope = CoroutineScope(Job() + Dispatchers.Main)
-    private var eventLogbusy = false;
+    private var isBusy = AtomicBoolean(false)
+    private var timeoutTimer: Timer = Timer()
 
     suspend fun logEvent(event: String, keyNumber: Int, lockNumber: Int, battery: String) {
         val eventLog = EventLog(
@@ -45,9 +49,9 @@ class EventLogService  @Inject constructor(
     }
 
     suspend fun syncEventLogs() {
-        if (!eventLogbusy) {
+        if (!isBusy.get()) {
             try {
-                eventLogbusy = true
+                setBusy(true)
                 val logs = appDatabase.eventLogDao().getAllByArchive(false)
                 for (log in logs) {
                     log.archived = true
@@ -69,8 +73,22 @@ class EventLogService  @Inject constructor(
             } catch (e: Exception) {
                 Log.d("EventLogService:", e.message.toString())
             } finally {
-                eventLogbusy = false;
+                setBusy(false);
             }
+        }
+    }
+
+    private fun setBusy(value: Boolean) {
+        isBusy.set(value)
+        if (value) {
+            timeoutTimer = Timer()
+            timeoutTimer.schedule(
+                timerTask()
+                {
+                    isBusy.set(false)
+                }, 10*1000)
+        } else {
+            timeoutTimer.cancel()
         }
     }
 }
