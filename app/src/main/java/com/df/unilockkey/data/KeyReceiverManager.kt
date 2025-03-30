@@ -15,9 +15,9 @@ interface KeyReceiverManager {
     fun disconnect()
     fun startReceiving()
     fun closeConnection()
-    fun sendKeySettings(setting: Settings)
-    fun sendLockSettings(setting: Settings)
+    fun sendKeySettings(setting: Settings): Boolean
+    fun sendLockSettings(setting: Settings): Boolean
     fun sendKeyEnabled()
-    fun sendKeyDate()
+    fun sendKeyDate(): Boolean
 
 }

@@ -195,12 +195,23 @@ class KeyInfoViewModel @Inject constructor(
             if (setting != null) {
                 Log.d("KeyInfoViewModel", "Sending Key Settings: " +  keyNumber.toString() +"," + setting.id)
                 debugLog.value += "Sending Key Settings: " +  keyNumber.toString() +"," + setting.id
-                while (keyReceiverManager.isBusy.get()) {
+                while (keyReceiverManager.isBusy.get() == true) {
                     delay(100)
                 }
-                keyReceiverManager.sendKeySettings(setting)
-                keyValid = "Configuration"
-                event = "Configuration"
+                if (keyReceiverManager.sendKeySettings(setting)) {
+                    keyValid = "Configuration"
+                    event = "Configuration"
+                } else {
+//                    //Retry
+//                    delay(500)
+//                    if (keyReceiverManager.sendKeySettings(setting)) {
+//                        keyValid = "Configuration"
+//                        event = "Configuration"
+//                    } else {
+                        keyValid = "Configuration Failed"
+                        event = "Configuration Failed"
+//                    }
+                }
             }
         }
     }
@@ -210,14 +221,25 @@ class KeyInfoViewModel @Inject constructor(
         viewModelScope.launch {
             val setting = settingsService.findLockSetting(lockNumber)
             if (setting != null) {
-                Log.d("KeyInfoViewModel", "Sending Lock Settings: " +  lockNumber.toString() +"," + setting.id)
-                debugLog.value += "Sending Lock Settings: " +  lockNumber.toString() +"," + setting.id
-                while (keyReceiverManager.isBusy.get()) {
+                Log.d("KeyInfoViewModel", "Sending Lock Settings: " + lockNumber.toString() + "," + setting.id)
+                debugLog.value += "Sending Lock Settings: " + lockNumber.toString() + "," + setting.id
+                while (keyReceiverManager.isBusy.get() == true) {
                     delay(100)
                 }
-                keyReceiverManager.sendLockSettings(setting)
-                keyValid = "Configuration"
-                event = "Configuration"
+                if (keyReceiverManager.sendLockSettings(setting)) {
+                    keyValid = "Configuration"
+                    event = "Configuration"
+                } else {
+                    //Retry
+                    delay(500)
+                    if (keyReceiverManager.sendLockSettings(setting)) {
+                        keyValid = "Configuration"
+                        event = "Configuration"
+                    } else {
+                        keyValid = "Configuration Failed"
+                        event = "Configuration Failed"
+                    }
+                }
             }
         }
     }
@@ -293,8 +315,9 @@ class KeyInfoViewModel @Inject constructor(
                             val sdf: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
                             val date = LocalDateTime.now()
 
-                            CheckKeySettings(keyId.toLong())
-
+                            if (result.data.lockId == "") {
+                                CheckKeySettings(keyId.toLong())
+                            }
                             if (result.data.lockId != "") {
                                 if (lockId != result.data.lockId) {
                                     lockId = result.data.lockId
@@ -337,7 +360,7 @@ class KeyInfoViewModel @Inject constructor(
                                                                     if (checkKeyExpired(lock, key)) {
                                                                         keyValid = "Key Expired"
                                                                     } else {
-                                                                        while (keyReceiverManager.isBusy.get()) {
+                                                                        while (keyReceiverManager.isBusy.get() == true) {
                                                                             delay(100)
                                                                         }
                                                                         setKeyEnabled(true)

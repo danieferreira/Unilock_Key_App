@@ -106,7 +106,6 @@ class KeyBLEReceiverManager @Inject constructor(
                             )
                         )
                     }
-                    setBusy(false)
                     gatt.close()
                 } else {
                     coroutineScope.launch {
@@ -137,6 +136,7 @@ class KeyBLEReceiverManager @Inject constructor(
                     }
                 }
             }
+            setBusy(false)
         }
 
         override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
@@ -182,6 +182,7 @@ class KeyBLEReceiverManager @Inject constructor(
             characteristic: BluetoothGattCharacteristic,
             value: ByteArray
         ) {
+            setBusy(false)
             with(characteristic) {
                 when (uuid) {
                     UUID.fromString(CHAR1_UUID) -> {
@@ -237,9 +238,9 @@ class KeyBLEReceiverManager @Inject constructor(
             value: ByteArray,
             status: Int
         ) {
+            setBusy(false)
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 enableNotification()
-
                 if (characteristic.uuid == UUID.fromString(CHAR2_UUID)) {
                     //Key Number
                     val valueStr = String(value, Charsets.UTF_8)
@@ -310,6 +311,7 @@ class KeyBLEReceiverManager @Inject constructor(
             characteristic: BluetoothGattCharacteristic,
             status: Int
         ) {
+            setBusy(false)
             if (status == BluetoothGatt.GATT_SUCCESS) {
 //                coroutineScope.launch {
 //                    data.emit(
@@ -334,13 +336,12 @@ class KeyBLEReceiverManager @Inject constructor(
             } else {
                 Log.d("BLEReceiverManager", "Write Characteristic Failed!!")
             }
-            setBusy(false)
         }
     }
 
     override fun sendKeyEnabled() {
         if (dataRepository.keyEnabled) {
-
+            setBusy(true)
             val char1Service = findCharacteristic(SERVICE_UUID, CHAR1_UUID)
             if (char1Service != null) {
                 val data = ByteArray(1)
@@ -361,10 +362,10 @@ class KeyBLEReceiverManager @Inject constructor(
         }
     }
 
-    override fun sendKeyDate() {
-        setBusy(true)
+    override fun sendKeyDate(): Boolean {
         val char3Service = findCharacteristic(SERVICE_UUID, CHAR3_UUID)
         if (char3Service != null) {
+            setBusy(true)
             Log.d("BLEReceiverManager", "Set Key Date")
             val calendar = Calendar.getInstance()
             val data = ByteArray(6)
@@ -375,23 +376,34 @@ class KeyBLEReceiverManager @Inject constructor(
             data[4] = calendar.get(Calendar.MINUTE).toByte()
             data[5] = calendar.get(Calendar.SECOND).toByte()
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                gatt?.writeCharacteristic(
-                    char3Service,
-                    data,
-                    BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
-                )
-            } else {
-                char3Service.setValue(data)
-                gatt?.writeCharacteristic(char3Service)
+            if (gatt != null) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    val result = gatt!!.writeCharacteristic(
+                        char3Service,
+                        data,
+                        BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+                    )
+//                    if (result == BluetoothStatusCodes.SUCCESS) {
+//                        return true
+//                    }
+                    return true
+                } else {
+                    char3Service.setValue(data)
+                    gatt!!.writeCharacteristic(char3Service)
+                    return true
+//                    if (gatt!!.writeCharacteristic(char3Service)) {
+//                        return true
+//                    }
+                }
             }
         }
+        return false
     }
 
     private fun setKeyDate(gatt: BluetoothGatt) {
-        setBusy(true)
         val char3Service = findCharacteristic(SERVICE_UUID, CHAR3_UUID)
         if (char3Service != null) {
+            setBusy(true)
             Log.d("BLEReceiverManager", "Set Key Date")
             val calendar = Calendar.getInstance()
             val data = ByteArray(6)
@@ -429,6 +441,7 @@ class KeyBLEReceiverManager @Inject constructor(
     private fun readKeyNumber(gatt: BluetoothGatt) {
         val characteristic = findCharacteristic(SERVICE_UUID, CHAR2_UUID)
         if (characteristic != null) {
+            setBusy(true)
             gatt.readCharacteristic(characteristic)
         }
     }
@@ -439,6 +452,7 @@ class KeyBLEReceiverManager @Inject constructor(
             Log.d("BLEReceiverManager", "Characteristic not found")
             return
         }
+        setBusy(true)
         val payLoad = when {
             characteristic.isIndicatable() -> BluetoothGattDescriptor.ENABLE_INDICATION_VALUE
             characteristic.isNotifiable() -> BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
@@ -530,10 +544,10 @@ class KeyBLEReceiverManager @Inject constructor(
         gatt?.close()
     }
 
-    override fun sendKeySettings(setting: Settings) {
-        setBusy(true)
+    override fun sendKeySettings(setting: Settings): Boolean {
         val char4Service = findCharacteristic(SERVICE_UUID, CHAR4_UUID)
         if (char4Service != null) {
+            setBusy(true)
             var data = setting.password1.toByteArray()
             data += ','.code.toByte()
             data += setting.password2.toByteArray()
@@ -548,24 +562,38 @@ class KeyBLEReceiverManager @Inject constructor(
                 data += setting.newPropgrammingPassword.toByteArray()
                 data += ','.code.toByte()
             }
-            //gatt?.beginReliableWrite()
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                gatt?.writeCharacteristic(
-                    char4Service,
-                    data,
-                    BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
-                )
-            } else {
-                char4Service.setValue(data)
-                gatt?.writeCharacteristic(char4Service)
+            if (gatt != null) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    val result = gatt!!.writeCharacteristic(
+                        char4Service,
+                        data,
+                        BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+                    )
+//                    if (result == BluetoothStatusCodes.SUCCESS) {
+//                        return true
+//                    }
+                    return true
+                } else {
+                    char4Service.setValue(data)
+                    gatt!!.writeCharacteristic(char4Service)
+                    return true
+//                    if (gatt!!.writeCharacteristic(char4Service)) {
+//                        return true
+//                    } else {
+//                        if (gatt!!.writeCharacteristic(char4Service)) {
+//                            return true
+//                        }
+//                    }
+                }
             }
         }
+        return false
     }
 
-    override fun sendLockSettings(setting: Settings) {
-        setBusy(true)
+    override fun sendLockSettings(setting: Settings): Boolean {
         val char5Service = findCharacteristic(SERVICE_UUID, CHAR5_UUID)
         if (char5Service != null) {
+            setBusy(true)
             var data = setting.password1.toByteArray()
             data += ','.code.toByte()
             data += setting.password2.toByteArray()
@@ -580,18 +608,33 @@ class KeyBLEReceiverManager @Inject constructor(
                 data += setting.newPropgrammingPassword.toByteArray()
                 data += ','.code.toByte()
             }
-            //gatt?.beginReliableWrite()
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                gatt?.writeCharacteristic(
-                    char5Service,
-                    data,
-                    BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
-                )
-            } else {
-                char5Service.setValue(data)
-                gatt?.writeCharacteristic(char5Service)
+            if (gatt != null) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    val result = gatt!!.writeCharacteristic(
+                        char5Service,
+                        data,
+                        BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+                    )
+                    return true
+//                    if (result == BluetoothStatusCodes.SUCCESS) {
+//                        return true
+//                    }
+                } else {
+                    char5Service.setValue(data)
+                    gatt!!.writeCharacteristic(char5Service)
+                    return true
+//
+//                    if (gatt!!.writeCharacteristic(char5Service)) {
+//                        return true
+//                    } else {
+//                        if (gatt!!.writeCharacteristic(char5Service)) {
+//                            return true
+//                        }
+//                    }
+                }
             }
         }
+        return false
     }
 
     private suspend fun newDebugLog(tag: String, message: String) {
@@ -615,7 +658,7 @@ class KeyBLEReceiverManager @Inject constructor(
                 timerTask()
                 {
                     isBusy.set(false)
-                }, 5*1000)
+                }, 15*1000)
         } else {
             timeoutTimer.cancel()
         }
